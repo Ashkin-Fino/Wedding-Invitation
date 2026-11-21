@@ -38,7 +38,7 @@ These are temporary bootstrap credentials. The normal deploy workflow does not u
 1. Open the repository's **Actions** tab.
 2. Select **Provision AWS infrastructure**.
 3. Click **Run workflow** and select branch `main`.
-4. Enter a globally unique website bucket name, for example a name containing the project and a random suffix.
+4. Enter a globally unique website bucket name and a different globally unique Terraform state bucket name.
 5. Select the AWS region and run the workflow.
 
 The workflow creates and secures the remote state bucket, installs Terraform on the GitHub-hosted runner, initializes the S3 backend, and applies the Terraform configuration. It creates:
