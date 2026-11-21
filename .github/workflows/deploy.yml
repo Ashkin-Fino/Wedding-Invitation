@@ -1,0 +1,65 @@
+name: Deploy wedding invitation to AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      invalidate_cache:
+        description: "Invalidate CloudFront cache after uploading"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: wedding-site-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build production site
+        run: npm run build
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          test -n "$AWS_REGION" || (echo "Missing repository variable AWS_REGION" && exit 1)
+          test -n "$S3_BUCKET" || (echo "Missing repository variable AWS_S3_BUCKET" && exit 1)
+          test -n "$CLOUDFRONT_DISTRIBUTION_ID" || (echo "Missing repository variable AWS_CLOUDFRONT_DISTRIBUTION_ID" && exit 1)
+
+      - name: Configure AWS credentials with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload site to S3
+        run: aws s3 sync dist/ "s3://$S3_BUCKET/" --delete
+
+      - name: Invalidate CloudFront cache
+        if: ${{ inputs.invalidate_cache }}
+        run: aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/*"
