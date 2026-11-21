@@ -1,0 +1,33 @@
+// Replace all placeholder wedding details and sample photos before publishing.
+export const WEDDING = {
+  couple: "Ashkin & Yesodhaa",
+  dateLabel: "The date will be announced",
+  // Example format: 2027-02-14T09:00:00+05:30 (India Standard Time)
+  dateISO: "2027-12-31T09:00:00+05:30",
+  ceremony: "Wedding Ceremony",
+  ceremonyTime: "Time to be announced",
+  reception: "Reception",
+  receptionTime: "Details to follow",
+  venue: "Your Wedding Venue",
+  address: "Venue address will be updated soon",
+  mapUrl: "https://maps.google.com",
+  story: [
+    { date: "The beginning", title: "A beautiful first meeting", body: "Every great story has a beginning. Ours started with a moment that brought two paths together." },
+    { date: "Getting closer", title: "A thousand little moments", body: "Conversations turned into memories, ordinary days became special, and friendship blossomed into something more." },
+    { date: "The question", title: "A promise for forever", body: "One heartfelt question, one beautiful answer, and the beginning of our next chapter." },
+    { date: "Our next chapter", title: "And so, forever begins", body: "With the love and blessings of our families, we're ready to begin this journey together." }
+  ]
+};
+export const IMAGES = {
+  hero: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=85",
+  story: "https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1400&q=85",
+  venue: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=85",
+  thanks: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1600&q=85",
+  gifts: [
+    "https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=700&q=80",
+    "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=700&q=80",
+    "https://images.unsplash.com/photo-1490312278390-ab64016e0aa9?auto=format&fit=crop&w=700&q=80"
+  ]
+};
+// Set this to a licensed/owned audio asset URL. Browsers require a user gesture to start audio.
+export const MUSIC_URL = "";
