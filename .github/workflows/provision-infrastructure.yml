@@ -42,6 +42,33 @@ jobs:
           test -n "$TF_STATE_BUCKET" || (echo "Terraform state bucket is required" && exit 1)
           test -n "$TF_VAR_bucket_name" || (echo "Website bucket name is required" && exit 1)
 
+      - name: Debug OIDC claims
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, json, base64, urllib.request
+
+          url = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]
+          separator = "&" if "?" in url else "?"
+          url += separator + "audience=sts.amazonaws.com"
+
+          request = urllib.request.Request(
+              url,
+              headers={
+                  "Authorization": "Bearer " +
+                  os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+              }
+          )
+
+          token = json.load(urllib.request.urlopen(request))["value"]
+          payload = token.split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(payload))
+
+          for key in ("iss", "aud", "sub"):
+              print(f"{key}: {claims.get(key)}")
+          PY
+
       - name: Configure AWS credentials with GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
