@@ -1,0 +1,116 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
+import { ArrowDown, ArrowUpRight, CalendarDays, Check, Clock3, Gift, Heart, ImagePlus, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { WEDDING, IMAGES, MUSIC_URL } from "./config";
+
+const reveal = { hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0, transition: { duration: .65, ease: [.22, 1, .36, 1] } } };
+function Heading({ eyebrow, title, subtitle, light = false }) {
+  return <motion.div className={`section-heading ${light ? "light" : ""}`} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true, amount: .2 }}>
+    <span className="eyebrow"><i />{eyebrow}<i /></span><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}
+  </motion.div>;
+}
+function Flourish() { return <div className="flourish" aria-hidden="true"><span>✦</span><i /><span>❧</span><i /><span>✦</span></div>; }
+function Countdown() {
+  const target = new Date(WEDDING.dateISO).getTime();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  const values = useMemo(() => { const d = Math.max(0, target - now); return [["Days", Math.floor(d / 86400000)], ["Hours", Math.floor(d / 3600000) % 24], ["Minutes", Math.floor(d / 60000) % 60], ["Seconds", Math.floor(d / 1000) % 60]]; }, [now, target]);
+  return <div className="countdown-grid">{values.map(([label, value]) => <div className="countdown-cell" key={label}><strong>{String(value).padStart(2, "0")}</strong><span>{label}</span></div>)}</div>;
+}
+function MusicPlayer() {
+  const audio = useRef(null); const [playing, setPlaying] = useState(false); const [muted, setMuted] = useState(false); const [notice, setNotice] = useState(false);
+  const toggle = async () => {
+    if (!MUSIC_URL) { setNotice(true); window.setTimeout(() => setNotice(false), 2500); return; }
+    if (playing) { audio.current?.pause(); setPlaying(false); }
+    else { try { await audio.current.play(); setPlaying(true); } catch { setNotice(true); window.setTimeout(() => setNotice(false), 2500); } }
+  };
+  return <div className="music-wrap">{MUSIC_URL && <audio ref={audio} src={MUSIC_URL} loop preload="none" muted={muted}/>}
+    <button className="music-button" onClick={toggle}>{playing ? <Pause size={16}/> : <Music2 size={16}/>}<span>{playing ? "Pause music" : "Play music"}</span></button>
+    {playing && <button className="music-mute" onClick={() => setMuted(v => !v)} aria-label="Toggle mute">{muted ? <VolumeX size={16}/> : <Volume2 size={16}/>}</button>}
+    <AnimatePresence>{notice && <motion.div className="music-notice" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>{MUSIC_URL ? "Your browser could not start audio." : "Add your licensed music file in src/config.js."}</motion.div>}</AnimatePresence>
+  </div>;
+}
+function Wishes() {
+  const [name,setName]=useState(""); const [message,setMessage]=useState(""); const [sent,setSent]=useState(false);
+  const [items,setItems]=useState([
+    {name:"A loving friend",message:"Wishing you both a lifetime filled with laughter, kindness and beautiful memories."},
+    {name:"With love",message:"May your new journey together be more wonderful than you ever imagined."},
+    {name:"Family",message:"Two hearts, one beautiful journey. Sending you all our love and blessings!"}
+  ]);
+  const submit=e=>{e.preventDefault();if(!name.trim()||!message.trim())return;setItems(old=>[{name:name.trim(),message:message.trim()},...old].slice(0,3));setName("");setMessage("");setSent(true);window.setTimeout(()=>setSent(false),2500);};
+  return <div className="wishes-layout"><form className="wish-form paper-card" onSubmit={submit}>
+    <span className="card-kicker">LEAVE A LITTLE LOVE</span><h3>Send your wishes</h3><p className="muted">Your kind words will become a part of our story.</p>
+    <label>Your name<input value={name} onChange={e=>setName(e.target.value)} placeholder="How should we call you?" maxLength={60} required/></label>
+    <label>Your message<textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Write a heartfelt wish..." rows="4" maxLength={500} required/></label>
+    <button className="button primary" type="submit"><Send size={15}/> Send wishes</button>
+    {sent&&<span className="success"><Check size={14}/> Added to this preview</span>}<small>Demo only — messages are not saved online yet.</small>
+  </form><div className="wish-feed"><div className="feed-title"><span className="eyebrow">KIND WORDS</span><h3>Notes from our loved ones</h3></div>
+    <AnimatePresence mode="popLayout">{items.map(w=><motion.article className="wish-note" key={w.name+w.message} layout initial={{opacity:0,x:14}} animate={{opacity:1,x:0}} exit={{opacity:0}}><span className="quote-mark">“</span><p>{w.message}</p><span className="wish-author">— {w.name}</span></motion.article>)}</AnimatePresence>
+  </div></div>;
+}
+function PhotoUpload() {
+  const [files,setFiles]=useState([]); const [sent,setSent]=useState(false);
+  return <div className="upload-card"><div className="upload-icon"><ImagePlus size={27}/></div><span className="eyebrow">THE DAY THROUGH YOUR EYES</span>
+    <h3>Help us keep every memory</h3><p>Captured a candid smile, a dance-floor moment or a little behind-the-scenes magic? We'd love to see it.</p>
+    <label className="file-picker"><input type="file" accept="image/*" multiple onChange={e=>{setFiles(Array.from(e.target.files||[]).filter(f=>f.type.startsWith("image/")).slice(0,10));setSent(false);}}/><ImagePlus size={16}/> Choose photos</label>
+    {files.length>0&&<div className="selected-files">{files.map((f,i)=><span key={f.name+i}><Check size={13}/>{f.name}</span>)}</div>}
+    <button className="button primary upload-submit" disabled={!files.length} onClick={()=>setSent(true)}>Preview upload <ArrowUpRight size={15}/></button>
+    {sent&&<span className="success"><Check size={14}/> {files.length} photo(s) selected. Online upload comes in a later milestone.</span>}
+    <small>Photo sharing will open after the wedding. Uploads will be stored privately once connected.</small>
+  </div>;
+}
+const giftSeed=[
+  ["A little something for our home","A thoughtful addition to our new beginnings.",IMAGES.gifts[0]],
+  ["A memory-making experience","Help us create a memory to treasure.",IMAGES.gifts[1]],
+  ["A keepsake for forever","A meaningful keepsake for our journey.",IMAGES.gifts[2]]
+];
+function GiftRegistry() {
+  const [reserved,setReserved]=useState([]); const [toast,setToast]=useState("");
+  const reserve=name=>{setReserved(old=>[...old,name]);setToast(name);window.setTimeout(()=>setToast(""),2500);};
+  return <><div className="gift-grid">{giftSeed.map(([name,detail,image],i)=><motion.article className="gift-card" key={name} variants={reveal} initial="hidden" whileInView="visible" viewport={{once:true}} transition={{delay:i*.08}}>
+    <div className="gift-image"><img src={image} alt="" loading="lazy"/><span>0{i+1}</span></div><div className="gift-info"><span className="card-kicker">A THOUGHTFUL GESTURE</span><h3>{name}</h3><p>{detail}</p>
+      <div className="gift-bottom"><span>Optional</span><button className={reserved.includes(name)?"reserve reserved":"reserve"} disabled={reserved.includes(name)} onClick={()=>reserve(name)}>{reserved.includes(name)?<><Check size={13}/> Reserved</>:<>Reserve <ArrowUpRight size={13}/></>}</button></div>
+    </div></motion.article>)}</div><p className="demo-note">Reservations are a visual demo and reset when the page is refreshed. No payment is collected.</p>
+    <AnimatePresence>{toast&&<motion.div className="toast" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}}>Thank you for choosing: {toast}</motion.div>}</AnimatePresence></>;
+}
+export default function App() {
+  const [menu,setMenu]=useState(false); const [active,setActive]=useState("invitation");
+  const {scrollYProgress}=useScroll(); const progress=useSpring(scrollYProgress,{stiffness:100,damping:30,restDelta:.001});
+  const nav=[["Our story","story"],["Countdown","countdown"],["The details","details"],["Wishes","wishes"],["Photos","photos"],["Gifts","gifts"]];
+  useEffect(()=>{const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)setActive(e.target.id);}),{rootMargin:"-35% 0px -55% 0px"});document.querySelectorAll("section[id]").forEach(s=>observer.observe(s));return()=>observer.disconnect();},[]);
+  const go=id=>{document.getElementById(id)?.scrollIntoView({behavior:"smooth"});setMenu(false);};
+  return <div className="site-shell"><motion.div className="progress" style={{scaleX:progress}}/>
+    <header className="topbar"><a className="brand" href="#invitation" onClick={e=>{e.preventDefault();go("invitation");}}><b>A <i>&</i> Y</b><small>THE WEDDING OF</small></a>
+      <nav className="desktop-nav">{nav.map(([label,id])=><button key={id} className={active===id?"active":""} onClick={()=>go(id)}>{label}</button>)}</nav>
+      <button className="menu-toggle" onClick={()=>setMenu(v=>!v)} aria-label="Toggle navigation">{menu?<X/>:<Menu/>}</button>
+    </header>
+    <AnimatePresence>{menu&&<motion.nav className="mobile-menu" initial={{opacity:0,y:-8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}>{nav.map(([label,id])=><button key={id} onClick={()=>go(id)}>{label}<ArrowUpRight size={15}/></button>)}<button onClick={()=>go("thank-you")}>Thank you<ArrowUpRight size={15}/></button></motion.nav>}</AnimatePresence>
+    <MusicPlayer/>
+    <main>
+      <section className="hero" id="invitation" style={{"--hero":`url("${IMAGES.hero}")`}}><div className="hero-frame">
+        <div className="hero-ornament">✦ &nbsp; WITH THE BLESSINGS OF OUR FAMILIES &nbsp; ✦</div><motion.div className="hero-copy" initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:1,delay:.2}}>
+          <span className="hero-pretitle">JOYFULLY INVITE YOU TO CELEBRATE</span><h1>Ashkin <em>&</em><br/>Yesodhaa</h1><Flourish/><p className="hero-subtitle">A beautiful beginning. A promise of forever.</p><span className="hero-date">{WEDDING.dateLabel}</span>
+          <button className="hero-scroll" onClick={()=>go("story")}><span>DISCOVER OUR STORY</span><ArrowDown size={16}/></button>
+        </motion.div><span className="hero-side">A CELEBRATION OF LOVE</span>
+      </div></section>
+      <section className="intro"><Flourish/><p>Two hearts, one journey, and a lifetime of memories waiting to unfold.</p><span>WE WOULD BE HONOURED BY YOUR PRESENCE</span></section>
+      <section className="story section-pad" id="story"><div className="story-photo"><img src={IMAGES.story} alt="A couple celebrating their love" loading="lazy"/><div className="photo-caption"><span>CHAPTER ONE</span><b>It was always you.</b></div><div className="photo-stamp">OUR<br/>STORY</div></div>
+        <div className="story-content"><Heading eyebrow="THE STORY OF US" title={<>A journey written<br/><i>in the stars</i></>} subtitle="From a first hello to a forever kind of love, every little moment brought us here."/>
+          <div className="timeline">{WEDDING.story.map((item,i)=><motion.div className="timeline-item" key={item.date} variants={reveal} initial="hidden" whileInView="visible" viewport={{once:true}}><span className="timeline-dot">{String(i+1).padStart(2,"0")}</span><div><span className="timeline-date">{item.date}</span><h3>{item.title}</h3><p>{item.body}</p></div></motion.div>)}</div>
+        </div>
+      </section>
+      <section className="countdown-section section-pad" id="countdown"><div className="pattern"/><div className="countdown-inner"><Heading light eyebrow="SAVE THE DATE" title={<>The countdown to<br/><i>forever</i></>} subtitle="A new chapter is almost here. We cannot wait to celebrate with you."/><Countdown/><div className="countdown-date"><CalendarDays size={16}/>{WEDDING.dateLabel}</div></div><span className="corner corner-a">✦</span><span className="corner corner-b">✦</span></section>
+      <section className="details section-pad" id="details"><Heading eyebrow="THE CELEBRATION" title={<>Join us for our<br/><i>special day</i></>} subtitle="Your presence will make our celebration even more meaningful."/>
+        <div className="details-layout"><div className="venue-photo"><img src={IMAGES.venue} alt="Elegant wedding venue" loading="lazy"/><span>A DAY TO REMEMBER</span></div><div className="event-card">
+          <div className="event-block"><span className="event-icon"><Heart size={18}/></span><div><span className="card-kicker">THE CEREMONY</span><h3>{WEDDING.ceremony}</h3><p><CalendarDays size={14}/>{WEDDING.dateLabel}</p><p><Clock3 size={14}/>{WEDDING.ceremonyTime}</p></div></div><div className="event-divider">✦</div>
+          <div className="event-block"><span className="event-icon"><MapPin size={18}/></span><div><span className="card-kicker">THE VENUE</span><h3>{WEDDING.venue}</h3><p><MapPin size={14}/>{WEDDING.address}</p><a href={WEDDING.mapUrl} target="_blank" rel="noreferrer">Get directions <ArrowUpRight size={14}/></a></div></div><div className="event-divider">✦</div>
+          <div className="event-block"><span className="event-icon"><Sparkles size={18}/></span><div><span className="card-kicker">CELEBRATE WITH US</span><h3>{WEDDING.reception}</h3><p><Clock3 size={14}/>{WEDDING.receptionTime}</p></div></div>
+        </div></div>
+      </section>
+      <section className="wishes section-pad" id="wishes"><Heading eyebrow="A LITTLE NOTE FOR US" title={<>Your words, our<br/><i>forever keepsake</i></>} subtitle="Leave us a wish, a blessing or a little piece of advice for the journey ahead."/><Wishes/></section>
+      <section className="photos section-pad" id="photos"><div className="pattern"/><Heading light eyebrow="SHARE THE JOY" title={<>Our day, through<br/><i>your eyes</i></>} subtitle="Every perspective holds a memory. Help us collect the moments we might have missed."/><PhotoUpload/></section>
+      <section className="gifts section-pad" id="gifts"><Heading eyebrow="A THOUGHTFUL GESTURE" title={<>Your presence is<br/><i>our greatest gift</i></>} subtitle="If you wish to bless us with something more, we've put together a small collection of ideas for our new home."/><GiftRegistry/></section>
+      <section className="thankyou" id="thank-you" style={{"--thanks":`url("${IMAGES.thanks}")`}}><div className="thankyou-content"><span className="eyebrow">UNTIL OUR PATHS MEET</span><Flourish/><h2>With love,<br/><i>and gratitude</i></h2><p>Thank you for being a part of our beautiful journey. Your love and blessings mean the world to us.</p><div className="thankyou-names">Ashkin <em>&</em> Yesodhaa</div><span className="thankyou-footer">MADE WITH LOVE · FOREVER BEGINS HERE</span></div></section>
+    </main><footer className="footer"><span>ASHKIN & YESODHAA</span><span>CELEBRATING LOVE, FAMILY & FOREVER</span><button onClick={()=>go("invitation")}>Back to top ↑</button></footer>
+  </div>;
+}
