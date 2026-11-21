@@ -1,0 +1,94 @@
+name: Provision AWS infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      bucket_name:
+        description: "Globally unique name for the wedding website S3 bucket"
+        required: true
+        type: string
+      aws_region:
+        description: "AWS region for the S3 bucket"
+        required: true
+        type: choice
+        options:
+          - ap-south-1
+          - ap-southeast-1
+          - us-east-1
+        default: ap-south-1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wedding-infrastructure
+  cancel-in-progress: false
+
+jobs:
+  provision:
+    name: Provision S3, CloudFront and GitHub OIDC
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ inputs.aws_region }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_VAR_bucket_name: ${{ inputs.bucket_name }}
+      TF_IN_AUTOMATION: true
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate bootstrap configuration
+        shell: bash
+        env:
+          BOOTSTRAP_ACCESS_KEY: ${{ secrets.AWS_BOOTSTRAP_ACCESS_KEY_ID }}
+          BOOTSTRAP_SECRET_KEY: ${{ secrets.AWS_BOOTSTRAP_SECRET_ACCESS_KEY }}
+        run: |
+          test -n "$BOOTSTRAP_ACCESS_KEY" || (echo "Missing secret AWS_BOOTSTRAP_ACCESS_KEY_ID" && exit 1)
+          test -n "$BOOTSTRAP_SECRET_KEY" || (echo "Missing secret AWS_BOOTSTRAP_SECRET_ACCESS_KEY" && exit 1)
+          test -n "$TF_STATE_BUCKET" || (echo "Missing repository variable TF_STATE_BUCKET" && exit 1)
+
+      - name: Configure temporary AWS bootstrap credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_BOOTSTRAP_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_BOOTSTRAP_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+          terraform_wrapper: false
+
+      - name: Terraform format and validate
+        working-directory: infra/terraform
+        run: |
+          terraform fmt -check
+          terraform init             -backend-config="bucket=$TF_STATE_BUCKET"             -backend-config="key=wedding-invitation/terraform.tfstate"             -backend-config="region=$AWS_REGION"             -backend-config="encrypt=true"             -backend-config="use_lockfile=true"
+          terraform validate
+
+      - name: Apply infrastructure
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve -input=false
+
+      - name: Show deployment configuration
+        working-directory: infra/terraform
+        run: |
+          {
+            echo "## AWS infrastructure provisioned"
+            echo
+            echo "| GitHub Actions repository variable | Terraform output |"
+            echo "|---|---|"
+            echo "| `AWS_ROLE_ARN` | `$(terraform output -raw github_actions_role_arn)` |"
+            echo "| `AWS_REGION` | `$(terraform output -raw aws_region)` |"
+            echo "| `AWS_S3_BUCKET` | `$(terraform output -raw s3_bucket_name)` |"
+            echo "| `AWS_CLOUDFRONT_DISTRIBUTION_ID` | `$(terraform output -raw cloudfront_distribution_id)` |"
+            echo
+            echo "**Website URL:** $(terraform output -raw cloudfront_domain_name)"
+            echo
+            echo "Add the four values above under GitHub → Settings → Secrets and variables → Actions → Variables."
+            echo "After verifying the OIDC deployment workflow works, delete the temporary AWS bootstrap access key and its GitHub secrets."
+          } >> "$GITHUB_STEP_SUMMARY"
