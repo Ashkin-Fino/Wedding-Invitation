@@ -9,7 +9,7 @@ These resources are created manually and reused by both GitHub Actions workflows
 - Terraform state bucket: `deployment-tf-state-bucket` in `ap-south-1`. Keep it private and enable versioning.
 - GitHub OIDC provider: `https://token.actions.githubusercontent.com`, with audience `sts.amazonaws.com`.
 - IAM role: `Github-Deployment-Role`.
-- The role trust policy must restrict the subject to `repo:Ashkin-Fino/Wedding-Invitation:ref:refs/heads/main` and audience to `sts.amazonaws.com`.
+- The role trust policy must restrict the subject to `repo:Ashkin-Fino@180907696/Wedding-Invitation@1466653869:ref:refs/heads/main` and audience to `sts.amazonaws.com`.
 - Attach the infrastructure/deployment permissions policy to this role. It needs access to the state bucket, create/configure the website bucket, manage CloudFront and OAC, set the website bucket policy, upload/delete site objects, and create CloudFront invalidations.
 
 The role ARN is:
