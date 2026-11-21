@@ -146,90 +146,6 @@ resource "aws_s3_bucket_policy" "site" {
   depends_on = [aws_s3_bucket_public_access_block.site]
 }
 
-# GitHub Actions assumes this role using OIDC. No long-lived AWS keys are stored in GitHub.
-resource "aws_iam_openid_connect_provider" "github" {
-  url            = "https://token.actions.githubusercontent.com"
-  client_id_list = ["sts.amazonaws.com"]
-}
-
-data "aws_iam_policy_document" "github_assume_role" {
-  statement {
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-
-    principals {
-      type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.github.arn]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "token.actions.githubusercontent.com:aud"
-      values   = ["sts.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:ref:refs/heads/main"]
-    }
-  }
-}
-
-resource "aws_iam_role" "github_deploy" {
-  name               = "${var.project_name}-github-deploy"
-  assume_role_policy = data.aws_iam_policy_document.github_assume_role.json
-  description        = "Deploys the wedding invitation from the main branch using GitHub Actions OIDC"
-}
-
-data "aws_iam_policy_document" "github_deploy" {
-  statement {
-    sid       = "ListSiteBucket"
-    actions   = ["s3:ListBucket"]
-    resources = [local.site_bucket_arn]
-  }
-
-  statement {
-    sid       = "UploadAndDeleteSiteFiles"
-    actions   = ["s3:PutObject", "s3:DeleteObject"]
-    resources = ["${local.site_bucket_arn}/*"]
-  }
-
-  statement {
-    sid       = "InvalidateCloudFront"
-    actions   = ["cloudfront:CreateInvalidation"]
-    resources = [local.distribution_arn]
-  }
-}
-
-resource "aws_iam_role_policy" "github_deploy" {
-  name   = "${var.project_name}-github-deploy-policy"
-  role   = aws_iam_role.github_deploy.id
-  policy = data.aws_iam_policy_document.github_deploy.json
-}
-
-variable "aws_region" {
-  description = "AWS region for the S3 bucket. CloudFront is a global service."
-  type        = string
-  default     = "ap-south-1"
-}
-
-variable "bucket_name" {
-  description = "Globally unique S3 bucket name for the static website assets."
-  type        = string
-}
-
-variable "github_repository" {
-  description = "GitHub repository allowed to deploy, in owner/repository format."
-  type        = string
-  default     = "Ashkin-Fino/Wedding-Invitation"
-}
-
-variable "project_name" {
-  description = "Prefix used for IAM resource names."
-  type        = string
-  default     = "ashkin-yesodhaa-wedding"
-}
-
 output "s3_bucket_name" {
   description = "Set this as the GitHub Actions variable AWS_S3_BUCKET."
   value       = aws_s3_bucket.site.bucket
@@ -243,11 +159,6 @@ output "cloudfront_distribution_id" {
 output "cloudfront_domain_name" {
   description = "Public HTTPS URL for the invitation site."
   value       = "https://${aws_cloudfront_distribution.site.domain_name}"
-}
-
-output "github_actions_role_arn" {
-  description = "Set this as the GitHub Actions variable AWS_ROLE_ARN."
-  value       = aws_iam_role.github_deploy.arn
 }
 
 output "aws_region" {
