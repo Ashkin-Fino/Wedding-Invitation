@@ -7,6 +7,10 @@ on:
         description: "Globally unique name for the wedding website S3 bucket"
         required: true
         type: string
+      tf_state_bucket:
+        description: "Different globally unique name for the Terraform state bucket"
+        required: true
+        type: string
       aws_region:
         description: "AWS region for the S3 bucket"
         required: true
@@ -32,7 +36,7 @@ jobs:
 
     env:
       AWS_REGION: ${{ inputs.aws_region }}
-      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_STATE_BUCKET: ${{ inputs.tf_state_bucket }}
       TF_VAR_bucket_name: ${{ inputs.bucket_name }}
       TF_IN_AUTOMATION: true
 
@@ -48,7 +52,7 @@ jobs:
         run: |
           test -n "$BOOTSTRAP_ACCESS_KEY" || (echo "Missing secret AWS_BOOTSTRAP_ACCESS_KEY_ID" && exit 1)
           test -n "$BOOTSTRAP_SECRET_KEY" || (echo "Missing secret AWS_BOOTSTRAP_SECRET_ACCESS_KEY" && exit 1)
-          test -n "$TF_STATE_BUCKET" || (echo "Missing repository variable TF_STATE_BUCKET" && exit 1)
+          test -n "$TF_STATE_BUCKET" || (echo "Terraform state bucket name is required" && exit 1)
 
       - name: Configure temporary AWS bootstrap credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -56,6 +60,31 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_BOOTSTRAP_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_BOOTSTRAP_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create private Terraform state bucket
+        shell: bash
+        run: |
+          if ! aws s3api head-bucket --bucket "$TF_STATE_BUCKET" 2>/dev/null; then
+            if [ "$AWS_REGION" = "us-east-1" ]; then
+              aws s3api create-bucket --bucket "$TF_STATE_BUCKET" --region "$AWS_REGION"
+            else
+              aws s3api create-bucket --bucket "$TF_STATE_BUCKET" --region "$AWS_REGION" \
+                --create-bucket-configuration "LocationConstraint=$AWS_REGION"
+            fi
+          else
+            echo "Terraform state bucket already exists; checking its region."
+          fi
+
+          LOCATION=$(aws s3api get-bucket-location --bucket "$TF_STATE_BUCKET" --query 'LocationConstraint' --output text)
+          if [ "$LOCATION" = "None" ]; then LOCATION="us-east-1"; fi
+          test "$LOCATION" = "$AWS_REGION" || (echo "State bucket is in $LOCATION but workflow region is $AWS_REGION" && exit 1)
+
+          aws s3api put-public-access-block --bucket "$TF_STATE_BUCKET" \
+            --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+          aws s3api put-bucket-versioning --bucket "$TF_STATE_BUCKET" \
+            --versioning-configuration Status=Enabled
+          aws s3api put-bucket-encryption --bucket "$TF_STATE_BUCKET" \
+            --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
