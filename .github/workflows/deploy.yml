@@ -25,6 +25,7 @@ jobs:
 
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
 
@@ -36,8 +37,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-
+    
       - name: Install dependencies
         run: npm install
 
@@ -48,6 +48,7 @@ jobs:
         shell: bash
         run: |
           test -n "$AWS_REGION" || (echo "Missing repository variable AWS_REGION" && exit 1)
+          test -n "$AWS_ROLE_ARN" || (echo "Missing repository variable AWS_ROLE_ARN" && exit 1)
           test -n "$S3_BUCKET" || (echo "Missing repository variable AWS_S3_BUCKET" && exit 1)
           test -n "$CLOUDFRONT_DISTRIBUTION_ID" || (echo "Missing repository variable AWS_CLOUDFRONT_DISTRIBUTION_ID" && exit 1)
 
