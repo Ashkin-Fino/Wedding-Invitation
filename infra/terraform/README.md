@@ -10,28 +10,15 @@ IAM and GitHub OIDC are used for deployment authentication; they are not applica
 
 Terraform runs in GitHub Actions. One initial AWS bootstrap step is needed because the OIDC provider and role do not exist yet.
 
-### 1. Create a Terraform state bucket in the AWS Console
+### 1. Prepare unique bucket names
 
-In Amazon S3, create a separate, globally unique bucket just for Terraform state (do not reuse the website bucket):
-- Region: `ap-south-1` (or use the same region you will select in the workflow).
-- Keep **Block all public access** enabled.
-- Enable bucket versioning.
-- Enable default server-side encryption (SSE-S3).
-- Do not enable static website hosting.
+The infrastructure workflow creates two separate S3 buckets:
+- A Terraform state bucket, used only to store encrypted/versioned Terraform state.
+- A website bucket, used by CloudFront to serve the built React application.
 
-This bucket is only for Terraform state. Terraform will create a different S3 bucket for the actual website.
+You do not need to create either bucket manually. During the first workflow run, enter two globally unique bucket names. The workflow creates the state bucket first, enables public-access blocking, versioning and SSE-S3 encryption, and then initializes Terraform. Terraform creates the website bucket.
 
-### 2. Add the state bucket name as a GitHub variable
-
-Go to **GitHub → Ashkin-Fino/Wedding-Invitation → Settings → Secrets and variables → Actions → Variables → New repository variable**.
-
-Create:
-
-| Name | Value |
-|---|---|
-| `TF_STATE_BUCKET` | The exact name of the state bucket created in step 1 |
-
-### 3. Create temporary AWS bootstrap credentials
+### 2. Create temporary AWS bootstrap credentials
 
 The first Terraform run needs AWS credentials with permission to create S3, CloudFront, IAM OIDC provider, IAM role and IAM policies. Do not use root-account access keys.
 
@@ -46,7 +33,7 @@ In **GitHub → Settings → Secrets and variables → Actions → Secrets**, cr
 
 These are temporary bootstrap credentials. The normal deploy workflow does not use them.
 
-### 4. Run the infrastructure workflow
+### 3. Run the infrastructure workflow
 
 1. Open the repository's **Actions** tab.
 2. Select **Provision AWS infrastructure**.
@@ -54,7 +41,7 @@ These are temporary bootstrap credentials. The normal deploy workflow does not u
 4. Enter a globally unique website bucket name, for example a name containing the project and a random suffix.
 5. Select the AWS region and run the workflow.
 
-The workflow installs Terraform on the GitHub-hosted runner, initializes the remote S3 state backend, and applies the Terraform configuration. It creates:
+The workflow creates and secures the remote state bucket, installs Terraform on the GitHub-hosted runner, initializes the S3 backend, and applies the Terraform configuration. It creates:
 - The private website S3 bucket and its security settings.
 - The CloudFront distribution and OAC.
 - The S3 bucket policy that permits only this CloudFront distribution to read website objects.
@@ -65,7 +52,7 @@ The Terraform state is stored remotely in the separate state bucket, with S3 nat
 
 If your AWS account already has a GitHub OIDC provider for `token.actions.githubusercontent.com`, the apply may report that it already exists. Stop rather than deleting the existing provider; the Terraform resource must be imported into the remote state before retrying.
 
-### 5. Add the Terraform outputs as GitHub variables
+### 4. Add the Terraform outputs as GitHub variables
 
 Open the successful **Provision AWS infrastructure** run and expand its summary. Copy the output values into **Settings → Secrets and variables → Actions → Variables**:
 
@@ -78,7 +65,7 @@ Open the successful **Provision AWS infrastructure** run and expand its summary.
 
 These four values are repository variables, not secrets.
 
-### 6. Deploy the website
+### 5. Deploy the website
 
 1. Open **Actions → Deploy wedding invitation to AWS**.
 2. Click **Run workflow** on branch `main`.
