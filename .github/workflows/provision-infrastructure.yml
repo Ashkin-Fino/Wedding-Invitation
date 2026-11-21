@@ -7,22 +7,10 @@ on:
         description: "Globally unique name for the wedding website S3 bucket"
         required: true
         type: string
-      tf_state_bucket:
-        description: "Different globally unique name for the Terraform state bucket"
-        required: true
-        type: string
-      aws_region:
-        description: "AWS region for the S3 bucket"
-        required: true
-        type: choice
-        options:
-          - ap-south-1
-          - ap-southeast-1
-          - us-east-1
-        default: ap-south-1
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: wedding-infrastructure
@@ -30,61 +18,35 @@ concurrency:
 
 jobs:
   provision:
-    name: Provision S3, CloudFront and GitHub OIDC
+    name: Provision S3 and CloudFront
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     env:
-      AWS_REGION: ${{ inputs.aws_region }}
-      TF_STATE_BUCKET: ${{ inputs.tf_state_bucket }}
+      AWS_REGION: ap-south-1
+      TF_STATE_BUCKET: deployment-tf-state-bucket
       TF_VAR_bucket_name: ${{ inputs.bucket_name }}
+      TF_VAR_aws_region: ap-south-1
       TF_IN_AUTOMATION: true
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Validate bootstrap configuration
+      - name: Validate configuration
         shell: bash
         env:
-          BOOTSTRAP_ACCESS_KEY: ${{ secrets.AWS_BOOTSTRAP_ACCESS_KEY_ID }}
-          BOOTSTRAP_SECRET_KEY: ${{ secrets.AWS_BOOTSTRAP_SECRET_ACCESS_KEY }}
+          ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
         run: |
-          test -n "$BOOTSTRAP_ACCESS_KEY" || (echo "Missing secret AWS_BOOTSTRAP_ACCESS_KEY_ID" && exit 1)
-          test -n "$BOOTSTRAP_SECRET_KEY" || (echo "Missing secret AWS_BOOTSTRAP_SECRET_ACCESS_KEY" && exit 1)
-          test -n "$TF_STATE_BUCKET" || (echo "Terraform state bucket name is required" && exit 1)
+          test -n "$ROLE_ARN" || (echo "Missing repository variable AWS_ROLE_ARN" && exit 1)
+          test -n "$TF_STATE_BUCKET" || (echo "Terraform state bucket is required" && exit 1)
+          test -n "$TF_VAR_bucket_name" || (echo "Website bucket name is required" && exit 1)
 
-      - name: Configure temporary AWS bootstrap credentials
+      - name: Configure AWS credentials with GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_BOOTSTRAP_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_BOOTSTRAP_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Create private Terraform state bucket
-        shell: bash
-        run: |
-          if ! aws s3api head-bucket --bucket "$TF_STATE_BUCKET" 2>/dev/null; then
-            if [ "$AWS_REGION" = "us-east-1" ]; then
-              aws s3api create-bucket --bucket "$TF_STATE_BUCKET" --region "$AWS_REGION"
-            else
-              aws s3api create-bucket --bucket "$TF_STATE_BUCKET" --region "$AWS_REGION" \
-                --create-bucket-configuration "LocationConstraint=$AWS_REGION"
-            fi
-          else
-            echo "Terraform state bucket already exists; checking its region."
-          fi
-
-          LOCATION=$(aws s3api get-bucket-location --bucket "$TF_STATE_BUCKET" --query 'LocationConstraint' --output text)
-          if [ "$LOCATION" = "None" ]; then LOCATION="us-east-1"; fi
-          test "$LOCATION" = "$AWS_REGION" || (echo "State bucket is in $LOCATION but workflow region is $AWS_REGION" && exit 1)
-
-          aws s3api put-public-access-block --bucket "$TF_STATE_BUCKET" \
-            --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-          aws s3api put-bucket-versioning --bucket "$TF_STATE_BUCKET" \
-            --versioning-configuration Status=Enabled
-          aws s3api put-bucket-encryption --bucket "$TF_STATE_BUCKET" \
-            --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -116,13 +78,13 @@ jobs:
             echo
             echo "| GitHub Actions repository variable | Terraform output |"
             echo "|---|---|"
-            echo "| `AWS_ROLE_ARN` | `$(terraform output -raw github_actions_role_arn)` |"
+            echo "| `AWS_ROLE_ARN` | Existing role: `arn:aws:iam::669930664580:role/Github-Deployment-Role` |"
             echo "| `AWS_REGION` | `$(terraform output -raw aws_region)` |"
             echo "| `AWS_S3_BUCKET` | `$(terraform output -raw s3_bucket_name)` |"
             echo "| `AWS_CLOUDFRONT_DISTRIBUTION_ID` | `$(terraform output -raw cloudfront_distribution_id)` |"
             echo
             echo "**Website URL:** $(terraform output -raw cloudfront_domain_name)"
             echo
-            echo "Add the four values above under GitHub → Settings → Secrets and variables → Actions → Variables."
-            echo "After verifying the OIDC deployment workflow works, delete the temporary AWS bootstrap access key and its GitHub secrets."
+            echo "The existing GitHub OIDC provider and Github-Deployment-Role are managed manually and are not created by Terraform."
+            echo "Add or update the four values under GitHub → Settings → Secrets and variables → Actions → Variables."
           } >> "$GITHUB_STEP_SUMMARY"
