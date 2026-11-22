@@ -190,8 +190,6 @@ def list_wishes():
             KeyConditionExpression=Key("gsi1pk").eq("STATUS#APPROVED"),
             ScanIndexForward=False,
             Limit=PUBLIC_WISH_LIMIT,
-            ProjectionExpression="wishId, #n, message, createdAt",
-            ExpressionAttributeNames={"#n": "name"},
         )
     except ClientError:
         return response(503, {"error": "Wishes are temporarily unavailable."})
