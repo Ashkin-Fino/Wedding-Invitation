@@ -36,5 +36,5 @@ export const IMAGES = {
     "https://images.unsplash.com/photo-1490312278390-ab64016e0aa9?auto=format&fit=crop&w=700&q=80"
   ]
 };
-// Set this to a licensed/owned audio asset URL. Browsers require a user gesture to start audio.
-export const MUSIC_URL = "";
+// Browsers require a user gesture before starting audio with sound.
+export const MUSIC_URL = "/music/This%20will%20be%20an%20everlasting%20love.mp3";
