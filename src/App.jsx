@@ -33,29 +33,72 @@ function MusicPlayer() {
   </div>;
 }
 function Wishes() {
-  const [name,setName]=useState(""); const [message,setMessage]=useState(""); const [sent,setSent]=useState(false);
-  const [items,setItems]=useState([
-    {name:"A loving friend",message:"Wishing you both a lifetime filled with laughter, kindness and beautiful memories."},
-    {name:"With love",message:"May your new journey together be more wonderful than you ever imagined."},
-    {name:"Family",message:"Two hearts, one beautiful journey. Sending you all our love and blessings!"}
-  ]);
-  const submit=e=>{
+  const [name,setName]=useState("");
+  const [message,setMessage]=useState("");
+  const [website,setWebsite]=useState("");
+  const [items,setItems]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [submitting,setSubmitting]=useState(false);
+  const [statusMessage,setStatusMessage]=useState("");
+  const [errorMessage,setErrorMessage]=useState("");
+  const [loadError,setLoadError]=useState("");
+
+  useEffect(()=>{
+    let active=true;
+    fetch("/api/wishes",{headers:{Accept:"application/json"}})
+      .then(async response=>{
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok) throw new Error(data.error||"Wishes are temporarily unavailable.");
+        return data;
+      })
+      .then(data=>{if(active)setItems(Array.isArray(data.wishes)?data.wishes:[]);})
+      .catch(()=>{if(active)setLoadError("We couldn't load wishes right now. Please try again later.");})
+      .finally(()=>{if(active)setLoading(false);});
+    return ()=>{active=false;};
+  },[]);
+
+  const submit=async e=>{
     e.preventDefault();
-    if(!name.trim()||!message.trim()) return;
-    setItems(old=>[{name:name.trim(),message:message.trim()},...old].slice(0,3));
-    setName("");
-    setMessage("");
-    setSent(true);
-    window.setTimeout(()=>setSent(false),2500);
+    if(submitting||!name.trim()||!message.trim()) return;
+    setSubmitting(true);
+    setStatusMessage("");
+    setErrorMessage("");
+    try{
+      const body=JSON.stringify({name:name.trim(),message:message.trim(),website});
+      const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(body));
+      const payloadHash=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+      const response=await fetch("/api/wishes",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-amz-content-sha256":payloadHash},
+        body
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(data.error||"We couldn't submit your wish. Please try again.");
+      setName("");
+      setMessage("");
+      setWebsite("");
+      setStatusMessage(data.message||"Thank you. Your wish has been received for review.");
+    }catch(error){
+      setErrorMessage(error.message||"We couldn't submit your wish. Please try again.");
+    }finally{
+      setSubmitting(false);
+    }
   };
+
   return <div className="wishes-layout"><form className="wish-form paper-card" onSubmit={submit}>
     <span className="card-kicker">LEAVE A LITTLE LOVE</span><h3>Send your wishes</h3><p className="muted">Your kind words will become a part of our story.</p>
-    <label>Your name<input value={name} onChange={e=>setName(e.target.value)} placeholder="How should we call you?" maxLength={60} required/></label>
-    <label>Your message<textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Write a heartfelt wish..." rows="4" maxLength={500} required/></label>
-    <button className="button primary" type="submit"><Send size={15}/> Send wishes</button>
-    {sent&&<span className="success"><Check size={14}/> Added to this preview</span>}<small>Demo only — messages are not saved online yet.</small>
+    <label>Your name<input value={name} onChange={e=>setName(e.target.value)} placeholder="How should we call you?" maxLength={50} required/></label>
+    <label>Your message<textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Write a heartfelt wish..." rows="4" maxLength={400} required/></label>
+    <div className="honeypot" aria-hidden="true"><label>Leave this field empty<input value={website} onChange={e=>setWebsite(e.target.value)} tabIndex={-1} autoComplete="off"/></label></div>
+    <button className="button primary" type="submit" disabled={submitting}><Send size={15}/> {submitting?"Sending...":"Send wishes"}</button>
+    {statusMessage&&<span className="success" role="status"><Check size={14}/>{statusMessage}</span>}
+    {errorMessage&&<span className="wish-error" role="alert">{errorMessage}</span>}
+    <small>Wishes are reviewed before appearing publicly.</small>
   </form><div className="wish-feed"><div className="feed-title"><span className="eyebrow">KIND WORDS</span><h3>Notes from our loved ones</h3></div>
-    <AnimatePresence mode="popLayout">{items.map(w=><motion.article className="wish-note" key={w.name+w.message} layout initial={{opacity:0,x:14}} animate={{opacity:1,x:0}} exit={{opacity:0}}><span className="quote-mark">“</span><p>{w.message}</p><span className="wish-author">— {w.name}</span></motion.article>)}</AnimatePresence>
+    {loading&&<p className="wish-empty">Loading wishes...</p>}
+    {!loading&&loadError&&<p className="wish-error" role="alert">{loadError}</p>}
+    {!loading&&!loadError&&!items.length&&<p className="wish-empty">Be the first to leave a little love.</p>}
+    <AnimatePresence mode="popLayout">{items.map(w=><motion.article className="wish-note" key={w.wishId} layout initial={{opacity:0,x:14}} animate={{opacity:1,x:0}} exit={{opacity:0}}><span className="quote-mark">“</span><p>{w.message}</p><span className="wish-author">— {w.name}</span></motion.article>)}</AnimatePresence>
   </div></div>;
 }
 function PhotoUpload() {
