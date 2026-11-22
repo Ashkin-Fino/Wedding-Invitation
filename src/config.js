@@ -8,6 +8,11 @@ export const WEDDING = {
   ceremonyTime: "04:00 PM",
   reception: "Reception",
   receptionTime: "06:30 PM",
+  // Add the reception-specific details when confirmed; these are intentionally not inferred from the wedding details.
+  receptionDateLabel: "Details to be announced",
+  receptionVenue: "Venue to be announced",
+  receptionAddress: "",
+  receptionMapUrl: "",
   venue: "Uthram Auditorium, Punniyam, Kanyakumari",
   address: "Uthram Auditorium, Punniyam, Kanyakumari",
   mapUrl: "https://maps.app.goo.gl/FjTXH3f915TA8aqP8",
