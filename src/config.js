@@ -7,7 +7,7 @@ export const WEDDING = {
   ceremony: "Wedding Ceremony",
   ceremonyTime: "04:00 PM Onwards",
   reception: "Reception",
-  receptionTime: "06:30 PM Onwards",
+  receptionTime: "06:00 PM Onwards",
   // Add the reception-specific details when confirmed; these are intentionally not inferred from the wedding details.
   receptionDateLabel: "14 February 2027",
   receptionVenue: "C.R Gardens",
