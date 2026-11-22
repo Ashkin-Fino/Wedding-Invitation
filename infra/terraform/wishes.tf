@@ -40,10 +40,25 @@ resource "aws_dynamodb_table" "wishes" {
   read_capacity  = 5
   write_capacity = 5
 
-  attribute { name = "pk" type = "S" }
-  attribute { name = "sk" type = "S" }
-  attribute { name = "gsi1pk" type = "S" }
-  attribute { name = "gsi1sk" type = "S" }
+  attribute {
+    name = "pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "sk"
+    type = "S"
+  }
+
+  attribute {
+    name = "gsi1pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "gsi1sk"
+    type = "S"
+  }
 
   global_secondary_index {
     name            = "status-created_at-index"
@@ -59,7 +74,9 @@ resource "aws_dynamodb_table" "wishes" {
     enabled        = true
   }
 
-  server_side_encryption { enabled = true }
+  server_side_encryption {
+    enabled = true
+  }
 
   tags = {
     Project     = "AshkinYesodhaaWedding"
