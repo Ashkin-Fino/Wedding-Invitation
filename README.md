@@ -33,7 +33,7 @@ Guest wishes are served by a Python 3.12 Lambda Function URL behind the existing
 - `GET /api/wishes` — returns the latest 50 approved wishes.
 - `POST /api/wishes` — stores a wish as `PENDING`; it does not publish immediately.
 
-The Lambda uses one DynamoDB table (`ashkin-yesodhaa-wishes`) with provisioned capacity (5 RCU / 5 WCU for the table and the same for its status index), no autoscaling, a 2-concurrent-execution reserved Lambda limit, 128 MB memory and a 3-second timeout. A per-IP limit allows up to 3 submissions in a 10-minute window. The hashed rate-limit keys expire automatically. Request bodies are limited to 2 KB; names to 50 characters and messages to 400 characters.
+The Lambda uses one DynamoDB table (`ashkin-yesodhaa-wishes`) with provisioned capacity (5 RCU / 5 WCU for the table and 10 RCU / 5 WCU for its status index), no autoscaling, a 2-concurrent-execution reserved Lambda limit, 128 MB memory and a 3-second timeout. The approved-wishes GET response is cached at CloudFront for 30 seconds; POST requests are not cached. A per-IP limit allows up to 3 submissions in a 10-minute window. The hashed rate-limit keys expire automatically. Request bodies are limited to 2 KB; names to 50 characters and messages to 400 characters.
 
 ### Approving wishes
 
