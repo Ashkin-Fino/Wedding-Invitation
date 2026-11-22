@@ -65,11 +65,9 @@ function Wishes() {
     setErrorMessage("");
     try{
       const body=JSON.stringify({name:name.trim(),message:message.trim(),website});
-      const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(body));
-      const payloadHash=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
       const response=await fetch("/api/wishes",{
         method:"POST",
-        headers:{"Content-Type":"application/json","x-amz-content-sha256":payloadHash},
+        headers:{"Content-Type":"application/json"},
         body
       });
       const data=await response.json().catch(()=>({}));

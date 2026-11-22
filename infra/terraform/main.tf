@@ -125,7 +125,7 @@ resource "random_password" "wedding_invitation_rate_limit_salt" {
 }
 
 resource "aws_dynamodb_table" "wedding_invitation_wishes" {
-  name           = "ashkin-yesodhaa-wedding-wishes"
+  name           = "ashkin-yesodhaa-wishes"
   billing_mode   = "PROVISIONED"
   hash_key       = "pk"
   range_key      = "sk"
@@ -281,7 +281,7 @@ resource "aws_cloudfront_origin_request_policy" "wedding_invitation" {
   headers_config {
     header_behavior = "whitelist"
     headers {
-      items = ["Content-Type", "X-Amz-Content-Sha256", "CloudFront-Viewer-Address"]
+      items = ["Content-Type", "CloudFront-Viewer-Address"]
     }
   }
 
