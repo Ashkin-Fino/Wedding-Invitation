@@ -190,7 +190,7 @@ resource "aws_iam_role_policy" "wedding_invitation_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "wedding_invitation" {
-  name              = "/aws/lambda/ashkin-yesodhaa-wishes-api"
+  name              = "/aws/lambda/ashkin-yesodhaa-wedding-lambda"
   retention_in_days = 7
 }
 
@@ -201,7 +201,7 @@ data "archive_file" "wedding_invitation_lambda" {
 }
 
 resource "aws_lambda_function" "wedding_invitation_lambda" {
-  function_name = "ashkin-yesodhaa-wishes-api"
+  function_name = "ashkin-yesodhaa-wedding-lambda"
   description   = "Invoked only through the wedding invitation CloudFront distribution."
   role          = aws_iam_role.wedding_invitation_lambda.arn
   runtime       = "python3.12"
@@ -233,14 +233,14 @@ resource "aws_lambda_function" "wedding_invitation_lambda" {
   }
 }
 
-resource "aws_lambda_function_url" "wishes" {
+resource "aws_lambda_function_url" "wedding_invitation_lambda_url" {
   function_name      = aws_lambda_function.wedding_invitation_lambda.function_name
   authorization_type = "AWS_IAM"
   invoke_mode        = "BUFFERED"
 }
 
-resource "aws_lambda_permission" "wishes_cloudfront" {
-  statement_id           = "AllowCloudFrontInvokeWishesUrl"
+resource "aws_lambda_permission" "wedding_invitation_cloudfront" {
+  statement_id           = "AllowCloudFrontInvokeeddingInvitationUrl"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.wedding_invitation_lambda.function_name
   principal              = "cloudfront.amazonaws.com"
@@ -248,16 +248,16 @@ resource "aws_lambda_permission" "wishes_cloudfront" {
   function_url_auth_type = "AWS_IAM"
 }
 
-resource "aws_cloudfront_origin_access_control" "wishes" {
-  name                              = "${var.bucket_name}-wishes-oac"
-  description                       = "Allow only the wedding CloudFront distribution to invoke the wishes Lambda URL"
+resource "aws_cloudfront_origin_access_control" "wedding_invitation" {
+  name                              = "${var.bucket_name}-wedding-invitation-oac"
+  description                       = "Allow only the wedding CloudFront distribution to invoke the wedding Lambda URL"
   origin_access_control_origin_type = "lambda"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
 
-resource "aws_cloudfront_origin_request_policy" "wishes" {
-  name    = "${var.bucket_name}-wishes-origin-policy"
+resource "aws_cloudfront_origin_request_policy" "wedding_invitation" {
+  name    = "${var.bucket_name}-wedding-invitation-origin-policy"
   comment = "Forward only headers required by the wishes API and abuse controls."
 
   headers_config {
@@ -276,7 +276,7 @@ resource "aws_cloudfront_origin_request_policy" "wishes" {
   }
 }
 
-resource "aws_cloudfront_cache_policy" "wishes" {
+resource "aws_cloudfront_cache_policy" "wedding_invitation" {
   name        = "${var.bucket_name}-wishes-get-cache"
   comment     = "Short edge cache for approved wishes GET responses; POST requests are never cached."
   min_ttl     = 0
@@ -318,7 +318,7 @@ resource "aws_cloudfront_distribution" "site" {
   origin {
     domain_name              = trimsuffix(trimprefix(aws_lambda_function_url.wishes.function_url, "https://"), "/")
     origin_id                = local.lambda_origin_id
-    origin_access_control_id = aws_cloudfront_origin_access_control.wishes.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.wedding_invitation.id
 
     custom_origin_config {
       http_port              = 80
@@ -335,8 +335,8 @@ resource "aws_cloudfront_distribution" "site" {
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
-    cache_policy_id        = aws_cloudfront_cache_policy.wishes.id
-    origin_request_policy_id = aws_cloudfront_origin_request_policy.wishes.id
+    cache_policy_id        = aws_cloudfront_cache_policy.wedding_invitation.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.wedding_invitation.id
   }
 
   default_cache_behavior {
