@@ -125,7 +125,7 @@ resource "random_password" "wedding_invitation_rate_limit_salt" {
 }
 
 resource "aws_dynamodb_table" "wedding_invitation_wishes" {
-  name           = "ashkin-yesodhaa-wishes"
+  name           = "ashkin-yesodhaa-wedding-wishes"
   billing_mode   = "PROVISIONED"
   hash_key       = "pk"
   range_key      = "sk"
