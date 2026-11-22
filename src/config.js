@@ -1,7 +1,7 @@
 // Replace all placeholder wedding details and sample photos before publishing.
 export const WEDDING = {
   couple: "Ashkin & Yesodhaa",
-  dateLabel: "2027-02-08T16:00:00+05:30",
+  dateLabel: "8 February 2027",
   // Example format: 2027-02-14T09:00:00+05:30 (India Standard Time)
   dateISO: "2027-02-08T16:00:00+05:30",
   ceremony: "Wedding Ceremony",
