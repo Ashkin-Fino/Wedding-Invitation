@@ -29,9 +29,6 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
   name = "Managed-CachingOptimized"
 }
 
-data "aws_cloudfront_cache_policy" "caching_disabled" {
-  name = "Managed-CachingDisabled"
-}
 
 locals {
   site_bucket_arn = "arn:aws:s3:::${var.bucket_name}"
@@ -115,7 +112,7 @@ resource "aws_cloudfront_distribution" "site" {
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
-    cache_policy_id        = data.aws_cloudfront_cache_policy.caching_disabled.id
+    cache_policy_id        = aws_cloudfront_cache_policy.wishes.id
     origin_request_policy_id = aws_cloudfront_origin_request_policy.wishes.id
   }
 
