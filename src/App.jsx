@@ -45,7 +45,7 @@ function StoryPhotoCarousel() {
     { src: "/images/story_photo/img_20261122_194529_1.jpeg", caption: "My favourite place will always be beside you." },
     { src: "/images/story_photo/0S4A1188.JPG", caption: "We are meant to be." },
     { src: "/images/story_photo/0S4A1180.JPG", caption: "Written in the stars" },
-    { src: "/images/story_photo/img_pondi.JPG", caption: "A thousand little moments, one beautiful forever." },
+    { src: "/images/story_photo/img_pondi.jpeg", caption: "A thousand little moments, one beautiful forever." },
     { src: "/images/story_photo/IMG-20260913-WA0061.JPG", caption: "Every chapter brought us closer to this moment." }
   ];
   const track = useRef(null);
