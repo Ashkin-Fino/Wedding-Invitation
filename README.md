@@ -42,7 +42,7 @@ New items are stored with `status = PENDING` and `gsi1pk = STATUS#PENDING`. To p
 1. Set `status` to `APPROVED`.
 2. Set `gsi1pk` to `STATUS#APPROVED`.
 
-Keep `gsi1sk` unchanged. The public GET endpoint queries only the approved partition. To reject a wish, delete its item. Do not change the table keys.
+Keep `gsi1sk` unchanged. The public GET endpoint queries only the approved partition. The feed can take up to 30 seconds to reflect an approval because the GET response is briefly cached at CloudFront. To reject a wish, delete its item. Do not change the table keys.
 
 ### Local frontend development
 
