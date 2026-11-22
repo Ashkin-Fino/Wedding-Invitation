@@ -65,7 +65,7 @@ resource "aws_dynamodb_table" "wishes" {
     hash_key        = "gsi1pk"
     range_key       = "gsi1sk"
     projection_type = "ALL"
-    read_capacity   = 5
+    read_capacity   = 10
     write_capacity  = 5
   }
 
@@ -190,5 +190,30 @@ resource "aws_cloudfront_origin_request_policy" "wishes" {
 
   query_strings_config {
     query_string_behavior = "none"
+  }
+}
+
+resource "aws_cloudfront_cache_policy" "wishes" {
+  name        = "${var.bucket_name}-wishes-get-cache"
+  comment     = "Short edge cache for approved wishes GET responses; POST requests are never cached."
+  min_ttl     = 0
+  default_ttl = 30
+  max_ttl     = 60
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
   }
 }
