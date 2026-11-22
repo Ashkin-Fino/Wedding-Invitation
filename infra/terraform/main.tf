@@ -220,7 +220,6 @@ resource "aws_lambda_function" "wedding_invitation_lambda" {
 
   memory_size                    = 128
   timeout                        = 3
-  reserved_concurrent_executions = 2
   architectures                  = ["x86_64"]
 
   environment {
