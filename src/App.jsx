@@ -90,7 +90,7 @@ export default function App() {
   useEffect(()=>{const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)setActive(e.target.id);}),{rootMargin:"-35% 0px -55% 0px"});document.querySelectorAll("section[id]").forEach(s=>observer.observe(s));return()=>observer.disconnect();},[]);
   const go=id=>{document.getElementById(id)?.scrollIntoView({behavior:"smooth"});setMenu(false);};
   return <div className="site-shell"><motion.div className="progress" style={{scaleX:progress}}/>
-    <header className="topbar"><a className="brand" href="#invitation" onClick={e=>{e.preventDefault();go("invitation");}}><b>A <i>&</i> Y</b><small>THE WEDDING OF</small></a>
+    <header className="topbar"><a className="brand" href="#invitation" onClick={e=>{e.preventDefault();go("invitation");}}><small>THE WEDDING OF</small><b>A <i>&</i> Y</b></a>
       <nav className="desktop-nav">{nav.map(([label,id])=><button key={id} className={active===id?"active":""} onClick={()=>go(id)}>{label}</button>)}</nav>
       <button className="menu-toggle" onClick={()=>setMenu(v=>!v)} aria-label="Toggle navigation">{menu?<X/>:<Menu/>}</button>
     </header>
