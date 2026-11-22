@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
-import { ArrowDown, ArrowUpRight, CalendarDays, Check, Clock3, Gift, Heart, ImagePlus, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Gift, Heart, ImagePlus, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import { WEDDING, IMAGES, MUSIC_URL } from "./config";
 
 const reveal = { hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0, transition: { duration: .65, ease: [.22, 1, .36, 1] } } };
@@ -83,6 +83,61 @@ function GiftRegistry() {
     </div></motion.article>)}</div><p className="demo-note">Reservations are a visual demo and reset when the page is refreshed. No payment is collected.</p>
     <AnimatePresence>{toast&&<motion.div className="toast" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}}>Thank you for choosing: {toast}</motion.div>}</AnimatePresence></>;
 }
+
+const eventDetails = [
+  {
+    title: "Wedding",
+    ceremonyLabel: "THE WEDDING CEREMONY",
+    ceremony: WEDDING.ceremony,
+    date: WEDDING.dateLabel,
+    time: WEDDING.ceremonyTime,
+    venue: WEDDING.venue,
+    address: WEDDING.address,
+    mapUrl: WEDDING.mapUrl
+  },
+  {
+    title: "Reception",
+    ceremonyLabel: "THE RECEPTION",
+    ceremony: WEDDING.reception,
+    date: WEDDING.receptionDateLabel || "Details to be announced",
+    time: WEDDING.receptionTime,
+    venue: WEDDING.receptionVenue || "Venue to be announced",
+    address: WEDDING.receptionAddress || "",
+    mapUrl: WEDDING.receptionMapUrl || ""
+  }
+];
+function EventCarousel() {
+  const track = useRef(null);
+  const [active, setActive] = useState(0);
+  const goTo = index => {
+    const next = Math.max(0, Math.min(eventDetails.length - 1, index));
+    track.current?.scrollTo({ left: track.current.clientWidth * next, behavior: "smooth" });
+    setActive(next);
+  };
+  const onScroll = () => {
+    if (!track.current) return;
+    setActive(Math.round(track.current.scrollLeft / track.current.clientWidth));
+  };
+  return <div className="event-carousel">
+    <div className="event-carousel-heading">
+      <div><span className="card-kicker">EVENT {String(active + 1).padStart(2, "0")} OF 02</span><h3>{eventDetails[active].title}</h3></div>
+      <div className="event-carousel-actions">
+        <span className="swipe-hint">Swipe to view {eventDetails[1 - active].title} <ArrowRight size={14}/></span>
+        <button type="button" onClick={() => goTo(active - 1)} disabled={active === 0} aria-label="Previous event"><ChevronLeft size={18}/></button>
+        <button type="button" onClick={() => goTo(active + 1)} disabled={active === eventDetails.length - 1} aria-label="Next event"><ChevronRight size={18}/></button>
+      </div>
+    </div>
+    <div className="event-carousel-track" ref={track} onScroll={onScroll}>
+      {eventDetails.map((event, index) => <article className="event-slide" key={event.title}>
+        <div className="event-block"><span className="event-icon"><Heart size={18}/></span><div><span className="card-kicker">{event.ceremonyLabel}</span><h3>{event.ceremony}</h3><p><CalendarDays size={14}/>{event.date}</p><p><Clock3 size={14}/>{event.time}</p></div></div>
+        <div className="event-divider">✦</div>
+        <div className="event-block"><span className="event-icon"><MapPin size={18}/></span><div><span className="card-kicker">THE VENUE</span><h3>{event.venue}</h3>{event.address && <p><MapPin size={14}/>{event.address}</p>}{event.mapUrl && <a href={event.mapUrl} target="_blank" rel="noreferrer">Get directions <ArrowUpRight size={14}/></a>}</div></div>
+      </article>)}
+    </div>
+    <div className="event-carousel-dots" aria-label={`Event ${active + 1} of 2`}>{eventDetails.map((event, index) => <button type="button" key={event.title} className={active === index ? "active" : ""} onClick={() => goTo(index)} aria-label={`Show ${event.title}`}/>)}</div>
+  </div>;
+}
+
 export default function App() {
   const [menu,setMenu]=useState(false); const [active,setActive]=useState("invitation");
   const {scrollYProgress}=useScroll(); const progress=useSpring(scrollYProgress,{stiffness:100,damping:30,restDelta:.001});
@@ -99,23 +154,19 @@ export default function App() {
     <main>
       <section className="hero" id="invitation" style={{"--hero":`url("${IMAGES.hero}")`}}><div className="hero-frame">
         <div className="hero-ornament">✦ &nbsp; WITH THE BLESSINGS OF OUR FAMILIES &nbsp; ✦</div><motion.div className="hero-copy" initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:1,delay:.2}}>
-          <span className="hero-pretitle">JOYFULLY INVITE YOU TO CELEBRATE</span><h1>Ashkin <em>&</em><br/>Yesodhaa</h1><Flourish/><p className="hero-subtitle">A beautiful beginning. A promise of forever.</p><span className="hero-date">{WEDDING.dateLabel}</span>
+          <span className="hero-pretitle">JOYFULLY INVITE YOU TO CELEBRATE</span><h1>Ashkin<br/><em>&</em><br/>Yesodhaa</h1><Flourish/><p className="hero-subtitle">A beautiful beginning. A promise of forever.</p><span className="hero-date">{WEDDING.dateLabel}</span>
           <button className="hero-scroll" onClick={()=>go("story")}><span>DISCOVER OUR STORY</span><ArrowDown size={16}/></button>
         </motion.div><span className="hero-side">A CELEBRATION OF LOVE</span>
       </div></section>
       <section className="intro"><Flourish/><p>Two hearts, one journey, and a lifetime of memories waiting to unfold.</p><span>WE WOULD BE HONOURED BY YOUR PRESENCE</span></section>
-      <section className="story section-pad" id="story"><div className="story-photo"><img src={IMAGES.story} alt="A couple celebrating their love" loading="lazy"/><div className="photo-caption"><span>CHAPTER ONE</span><b>It was always you.</b></div><div className="photo-stamp">OUR<br/>STORY</div></div>
+      <section className="story section-pad" id="story"><div className="story-photo"><img src={IMAGES.story} alt="A couple celebrating their love" loading="lazy"/><div className="photo-caption"><b>It was always you.</b></div></div>
         <div className="story-content"><Heading eyebrow="THE STORY OF US" title={<>A journey written<br/><i>in the stars</i></>} subtitle="From a first hello to a forever kind of love, every little moment brought us here."/>
           <div className="timeline">{WEDDING.story.map((item,i)=><motion.div className="timeline-item" key={item.date} variants={reveal} initial="hidden" whileInView="visible" viewport={{once:true}}><span className="timeline-dot">{String(i+1).padStart(2,"0")}</span><div><span className="timeline-date">{item.date}</span><h3>{item.title}</h3><p>{item.body}</p></div></motion.div>)}</div>
         </div>
       </section>
       <section className="countdown-section section-pad" id="countdown"><div className="pattern"/><div className="countdown-inner"><Heading light eyebrow="SAVE THE DATE" title={<>The countdown to<br/><i>forever</i></>} subtitle="A new chapter is almost here. We cannot wait to celebrate with you."/><Countdown/><div className="countdown-date"><CalendarDays size={16}/>{WEDDING.dateLabel}</div></div><span className="corner corner-a">✦</span><span className="corner corner-b">✦</span></section>
       <section className="details section-pad" id="details"><Heading eyebrow="THE CELEBRATION" title={<>Join us for our<br/><i>special day</i></>} subtitle="Your presence will make our celebration even more meaningful."/>
-        <div className="details-layout"><div className="venue-photo"><img src={IMAGES.venue} alt="Elegant wedding venue" loading="lazy"/><span>A DAY TO REMEMBER</span></div><div className="event-card">
-          <div className="event-block"><span className="event-icon"><Heart size={18}/></span><div><span className="card-kicker">THE CEREMONY</span><h3>{WEDDING.ceremony}</h3><p><CalendarDays size={14}/>{WEDDING.dateLabel}</p><p><Clock3 size={14}/>{WEDDING.ceremonyTime}</p></div></div><div className="event-divider">✦</div>
-          <div className="event-block"><span className="event-icon"><MapPin size={18}/></span><div><span className="card-kicker">THE VENUE</span><h3>{WEDDING.venue}</h3><p><MapPin size={14}/>{WEDDING.address}</p><a href={WEDDING.mapUrl} target="_blank" rel="noreferrer">Get directions <ArrowUpRight size={14}/></a></div></div><div className="event-divider">✦</div>
-          <div className="event-block"><span className="event-icon"><Sparkles size={18}/></span><div><span className="card-kicker">CELEBRATE WITH US</span><h3>{WEDDING.reception}</h3><p><Clock3 size={14}/>{WEDDING.receptionTime}</p></div></div>
-        </div></div>
+        <EventCarousel/>
       </section>
       <section className="wishes section-pad" id="wishes"><Heading eyebrow="A LITTLE NOTE FOR US" title={<>Your words, our<br/><i>forever keepsake</i></>} subtitle="Leave us a wish, a blessing or a little piece of advice for the journey ahead."/><Wishes/></section>
       <section className="photos section-pad" id="photos"><div className="pattern"/><Heading light eyebrow="SHARE THE JOY" title={<>Our day, through<br/><i>your eyes</i></>} subtitle="Every perspective holds a memory. Help us collect the moments we might have missed."/><PhotoUpload/></section>
