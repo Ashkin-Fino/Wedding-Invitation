@@ -153,9 +153,18 @@ resource "aws_dynamodb_table" "wedding_invitation_wishes" {
   }
 
   global_secondary_index {
-    name            = "status-created_at-index"
-    hash_key        = "gsi1pk"
-    range_key       = "gsi1sk"
+    name = "status-created_at-index"
+
+    key_schema {
+      attribute_name = "gsi1pk"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "gsi1sk"
+      key_type       = "RANGE"
+    }
+
     projection_type = "ALL"
     read_capacity   = 10
     write_capacity  = 10
@@ -240,12 +249,21 @@ resource "aws_lambda_function_url" "wedding_invitation_lambda_url" {
 }
 
 resource "aws_lambda_permission" "wedding_invitation_cloudfront" {
-  statement_id           = "AllowCloudFrontInvokeeddingInvitationUrl"
+  statement_id           = "AllowCloudFrontInvokeWeddingInvitationUrl"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.wedding_invitation_lambda.function_name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.site.arn
   function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_lambda_permission" "wedding_invitation_cloudfront_invoke" {
+  statement_id             = "AllowCloudFrontInvokeWeddingInvitationFunction"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.wedding_invitation_lambda.function_name
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = aws_cloudfront_distribution.site.arn
+  invoked_via_function_url = true
 }
 
 resource "aws_cloudfront_origin_access_control" "wedding_invitation" {
@@ -316,7 +334,7 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   origin {
-    domain_name              = trimsuffix(trimprefix(aws_lambda_function_url.wishes.function_url, "https://"), "/")
+    domain_name              = trimsuffix(trimprefix(aws_lambda_function_url.wedding_invitation_lambda_url.function_url, "https://"), "/")
     origin_id                = local.lambda_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.wedding_invitation.id
 
