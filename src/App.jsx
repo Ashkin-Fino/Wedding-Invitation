@@ -134,9 +134,11 @@ function EventCarousel() {
     <div className="event-carousel-track" ref={track} onScroll={onScroll}>
       {eventDetails.map((event, index) => <article className="event-slide" key={event.title}>
         <img className="event-slide-image" src={event.image} alt={event.imageAlt} loading="lazy"/>
-        <div className="event-block"><span className="event-icon"><Heart size={18}/></span><div><span className="card-kicker">{event.ceremonyLabel}</span><h3>{event.ceremony}</h3><p><CalendarDays size={14}/>{event.date}</p><p><Clock3 size={14}/>{event.time}</p></div></div>
-        <div className="event-divider">✦</div>
-        <div className="event-block"><span className="event-icon"><MapPin size={18}/></span><div><span className="card-kicker">THE VENUE</span><h3>{event.venue}</h3>{event.address && <p><MapPin size={14}/>{event.address}</p>}{event.mapUrl && <a href={event.mapUrl} target="_blank" rel="noreferrer">Get directions <ArrowUpRight size={14}/></a>}</div></div>
+        <div className="event-slide-details">
+          <div className="event-block"><span className="event-icon"><Heart size={18}/></span><div><span className="card-kicker">{event.ceremonyLabel}</span><h3>{event.ceremony}</h3><p><CalendarDays size={14}/>{event.date}</p><p><Clock3 size={14}/>{event.time}</p></div></div>
+          <div className="event-divider">✦</div>
+          <div className="event-block"><span className="event-icon"><MapPin size={18}/></span><div><span className="card-kicker">THE VENUE</span><h3>{event.venue}</h3>{event.address && <p><MapPin size={14}/>{event.address}</p>}{event.mapUrl && <a href={event.mapUrl} target="_blank" rel="noreferrer">Get directions <ArrowUpRight size={14}/></a>}</div></div>
+        </div>
       </article>)}
     </div>
     <div className="event-carousel-dots" aria-label={`Event ${active + 1} of 2`}>{eventDetails.map((event, index) => <button type="button" key={event.title} className={active === index ? "active" : ""} onClick={() => goTo(index)} aria-label={`Show ${event.title}`}/>)}</div>
