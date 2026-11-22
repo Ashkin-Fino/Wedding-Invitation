@@ -16,14 +16,14 @@ data "aws_iam_policy_document" "wishes_lambda_permissions" {
     actions = ["dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:Query"]
     resources = [
       aws_dynamodb_table.wishes.arn,
-      "\${aws_dynamodb_table.wishes.arn}/index/status-created_at-index"
+      "${aws_dynamodb_table.wishes.arn}/index/status-created_at-index"
     ]
   }
   statement {
     sid       = "WriteFunctionLogs"
     effect    = "Allow"
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
-    resources = ["\${aws_cloudwatch_log_group.wishes.arn}:*"]
+    resources = ["${aws_cloudwatch_log_group.wishes.arn}:*"]
   }
 }
 
@@ -104,8 +104,8 @@ resource "aws_cloudwatch_log_group" "wishes" {
 
 data "archive_file" "wishes_lambda" {
   type        = "zip"
-  source_dir  = "\${path.module}/../../backend/wishes"
-  output_path = "\${path.module}/wishes-lambda.zip"
+  source_dir  = "${path.module}/../../backend/wishes"
+  output_path = "${path.module}/wishes-lambda.zip"
 }
 
 resource "aws_lambda_function" "wishes" {
@@ -116,6 +116,7 @@ resource "aws_lambda_function" "wishes" {
   handler       = "handler.lambda_handler"
   filename         = data.archive_file.wishes_lambda.output_path
   source_code_hash = data.archive_file.wishes_lambda.output_base64sha256
+
   memory_size                    = 128
   timeout                        = 3
   reserved_concurrent_executions = 2
@@ -165,7 +166,7 @@ resource "aws_lambda_permission" "wishes_cloudfront_invoke" {
 }
 
 resource "aws_cloudfront_origin_access_control" "wishes" {
-  name                              = "\${var.bucket_name}-wishes-oac"
+  name                              = "${var.bucket_name}-wishes-oac"
   description                       = "Allow only the wedding CloudFront distribution to invoke the wishes Lambda URL"
   origin_access_control_origin_type = "lambda"
   signing_behavior                  = "always"
@@ -173,7 +174,7 @@ resource "aws_cloudfront_origin_access_control" "wishes" {
 }
 
 resource "aws_cloudfront_origin_request_policy" "wishes" {
-  name    = "\${var.bucket_name}-wishes-origin-policy"
+  name    = "${var.bucket_name}-wishes-origin-policy"
   comment = "Forward only headers required by the wishes API and abuse controls."
 
   headers_config {
