@@ -17,7 +17,7 @@
 .story-photo-dots{position:relative;z-index:3;display:flex;justify-content:center;gap:8px;margin:14px 24px 0 0}
 .story-photo-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:#d8c9b5}
 .story-photo-dots button.active{width:22px;border-radius:8px;background:var(--maroon)}
-.hero-date{font-size:11px}
+.hero-date{font-size:13px}
 @media(max-width:650px){
   .story-photo-slide img{height:430px}
   .story-photo-slide .photo-caption{left:-10px;bottom:25px;padding:14px 18px;max-width:calc(100% - 5px)}
@@ -25,5 +25,5 @@
   .story-photo-prev{left:6px}
   .story-photo-next{right:28px}
   .story-photo-dots{margin-right:20px}
-  .hero-date{font-size:10px}
+  .hero-date{font-size:12px}
 }
