@@ -14,3 +14,6 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Generated Lambda deployment package
+infra/terraform/*.zip
