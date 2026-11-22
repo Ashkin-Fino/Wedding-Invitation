@@ -173,9 +173,9 @@ def submit_wish(event):
                 "wishId": wish_id,
                 "name": payload["name"],
                 "message": payload["message"],
-                "status": "PENDING",
+                "status": "APPROVED",
                 "createdAt": created_at,
-                "gsi1pk": "STATUS#PENDING",
+                "gsi1pk": "STATUS#APPROVED",
                 "gsi1sk": f"{created_at}#{wish_id}",
             },
             ConditionExpression="attribute_not_exists(pk)",
@@ -184,7 +184,7 @@ def submit_wish(event):
     except ClientError:
         return response(503, {"error": "We could not save your wish right now. Please try again later."})
 
-    return response(201, {"message": "Thank you. Your wish has been received for review."})
+    return response(201, {"message": "Thank you! Your wish has been published."})
 
 
 def list_wishes():
