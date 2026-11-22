@@ -85,6 +85,7 @@ jobs:
             echo "| `AWS_REGION` | `$(terraform output -raw aws_region)` |"
             echo "| `AWS_S3_BUCKET` | `$(terraform output -raw s3_bucket_name)` |"
             echo "| `AWS_CLOUDFRONT_DISTRIBUTION_ID` | `$(terraform output -raw cloudfront_distribution_id)` |"
+            echo "| Wishes DynamoDB table | `$(terraform output -raw wishes_table_name)` |"
             echo
             echo "**Website URL:** $(terraform output -raw cloudfront_domain_name)"
             echo
