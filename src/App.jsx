@@ -90,7 +90,7 @@ function Wishes() {
       setName("");
       setMessage("");
       if(honeypotRef.current) honeypotRef.current.value="";
-      setStatusMessage("Your wish has been saved and is awaiting review.");
+      setStatusMessage("Your wish has been published. Thank you!");
     }catch(error){
       setErrorMessage(error.message||"We couldn't submit your wish. Please try again.");
     }finally{
