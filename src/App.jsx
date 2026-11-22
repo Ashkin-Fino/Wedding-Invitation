@@ -72,11 +72,15 @@ function Wishes() {
         body
       });
       const data=await response.json().catch(()=>({}));
-      if(!response.ok) throw new Error(data.error||"We couldn't submit your wish. Please try again.");
+      if(response.status===202){
+        setErrorMessage("Your wish was not saved because the anti-spam check could not verify this submission. Please refresh the page and try again.");
+        return;
+      }
+      if(response.status!==201) throw new Error(data.error||"We couldn't submit your wish. Please try again.");
       setName("");
       setMessage("");
       if(honeypotRef.current) honeypotRef.current.value="";
-      setStatusMessage(data.message||"Thank you. Your wish has been received for review.");
+      setStatusMessage("Your wish has been saved and is awaiting review.");
     }catch(error){
       setErrorMessage(error.message||"We couldn't submit your wish. Please try again.");
     }finally{
