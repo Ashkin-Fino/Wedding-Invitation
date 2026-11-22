@@ -9,7 +9,9 @@ function Heading({ eyebrow, title, subtitle, light = false }) {
     <span className="eyebrow"><i />{eyebrow}<i /></span><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}
   </motion.div>;
 }
-function Flourish() { return <div className="flourish" aria-hidden="true"><span>✦</span><i /><span>❧</span><i /><span>✦</span></div>; }
+function Flourish() { 
+  return <div className="flourish" aria-hidden="true"><span>✦</span><i /><span>❧</span><i /><span>✦</span></div>; 
+}
 function Countdown() {
   const target = new Date(WEDDING.dateISO).getTime();
   const [now, setNow] = useState(Date.now());
@@ -37,7 +39,15 @@ function Wishes() {
     {name:"With love",message:"May your new journey together be more wonderful than you ever imagined."},
     {name:"Family",message:"Two hearts, one beautiful journey. Sending you all our love and blessings!"}
   ]);
-  const submit=e=>{e.preventDefault();if(!name.trim()||!message.trim())return;setItems(old=>[{name:name.trim(),message:message.trim()},...old].slice(0,3));setName("");setMessage("");setSent(true);window.setTimeout(()=>setSent(false),2500);};
+  const submit=e=>{
+    e.preventDefault();
+    if(!name.trim()||!message.trim()) return;
+    setItems(old=>[{name:name.trim(),message:message.trim()},...old].slice(0,3));
+    setName("");
+    setMessage("");
+    setSent(true);
+    window.setTimeout(()=>setSent(false),2500);
+  };
   return <div className="wishes-layout"><form className="wish-form paper-card" onSubmit={submit}>
     <span className="card-kicker">LEAVE A LITTLE LOVE</span><h3>Send your wishes</h3><p className="muted">Your kind words will become a part of our story.</p>
     <label>Your name<input value={name} onChange={e=>setName(e.target.value)} placeholder="How should we call you?" maxLength={60} required/></label>
