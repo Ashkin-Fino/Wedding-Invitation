@@ -31,19 +31,13 @@ Run `npm run build`, then upload the contents of `dist/` to an S3 bucket configu
 Guest wishes are served by a Python 3.12 Lambda Function URL behind the existing CloudFront distribution. CloudFront uses Origin Access Control (OAC) with SigV4; the Function URL uses `AWS_IAM` and grants invocation only to this distribution. The public API is available at the same origin as the website:
 
 - `GET /api/wishes` — returns the latest 50 approved wishes.
-- `POST /api/wishes` — stores a wish as `PENDING`; it does not publish immediately.
+- `POST /api/wishes` — validates and automatically publishes a wish.
 
 The Lambda uses one DynamoDB table (`ashkin-yesodhaa-wedding-wishes`) with provisioned capacity (5 RCU / 10 WCU for the table and 10 RCU / 10 WCU for its status index), no autoscaling, 128 MB memory and a 3-second timeout. It uses the account's unreserved Lambda concurrency so deployment does not reserve capacity needed by other functions. The approved-wishes GET response is cached at CloudFront for 30 seconds; POST requests are not cached. A per-IP limit allows up to 10 submissions in a 10-minute window. The hashed rate-limit keys expire automatically. Request bodies are limited to 2 KB; names to 50 characters and messages to 400 characters.
 
 ### Approving wishes
 
-New items are stored with `status = PENDING` and `gsi1pk = STATUS#PENDING`. To publish a wish, open the DynamoDB table in the AWS console, find the item by its `wishId`, and update both attributes:
-
-1. Set `status` to `APPROVED`.
-2. Set `gsi1pk` to `STATUS#APPROVED`.
-
-Keep `gsi1sk` unchanged. The public GET endpoint queries only the approved partition. The feed can take up to 30 seconds to reflect an approval because the GET response is briefly cached at CloudFront. To reject a wish, delete its item. Do not change the table keys.
-
+New valid wishes are stored directly with `status = APPROVED` and `gsi1pk = STATUS#APPROVED`, so they are eligible for the public feed immediately. To remove an unwanted wish, delete its item from the DynamoDB table. The feed can take up to 30 seconds to reflect a deletion because the GET response is briefly cached at CloudFront. Do not change the table keys.
 ### Local frontend development
 
 After the API infrastructure has been provisioned, create an untracked `.env.local` file in the repository root:
