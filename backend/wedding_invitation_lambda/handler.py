@@ -135,7 +135,7 @@ def parse_body(event):
 
 
 def submit_wish(event):
-    print(f"Wish received: {event}. Processing...")
+    print(f"Wish received from user. Processing...")
     headers = {key.lower(): value for key, value in (event.get("headers") or {}).items()}
     if not headers.get("content-type", "").lower().startswith("application/json"):
         return response(415, {"error": "Content-Type must be application/json."})
@@ -162,7 +162,7 @@ def submit_wish(event):
                 {"retry-after": str(RATE_LIMIT_WINDOW_SECONDS)},
             )
 
-        print("Wish validated. Saving to database:", payload)
+        print("Wish validated. Saving to database...")
 
         wish_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
