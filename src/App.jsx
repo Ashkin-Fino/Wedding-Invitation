@@ -42,7 +42,9 @@ function StoryPhotoCarousel() {
   const photos = [
     { src: "/images/story_photo/0S4A0849.JPG", caption: "And somehow, every moment led me to you." },
     { src: "/images/story_photo/0S4A0897.JPG", caption: "A thousand little moments, one beautiful forever." },
-    { src: "/images/story_photo/img_20261122_194529_1.jpeg", caption: "My favourite place will always be beside you." }
+    { src: "/images/story_photo/img_20261122_194529_1.jpeg", caption: "My favourite place will always be beside you." },
+    { src: "/images/story_photo/0S4A1188.JPG", caption: "We are meant to be." },
+    { src: "/images/story_photo/0S4A1180.JPG", caption: "Written in the starts" }
   ];
   const track = useRef(null);
   const [active, setActive] = useState(0);
