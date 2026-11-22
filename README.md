@@ -24,3 +24,38 @@ Update `src/config.js` with the final wedding date/time, ceremony and reception 
 
 ## Deploy to AWS
 Run `npm run build`, then upload the contents of `dist/` to an S3 bucket configured for private origin access through CloudFront. Set the CloudFront default root object to `index.html`. Backend APIs, private photo uploads and durable gift reservations are planned for later milestones.
+
+
+## Guest wishes backend
+
+Guest wishes are served by a Python 3.12 Lambda Function URL behind the existing CloudFront distribution. CloudFront uses Origin Access Control (OAC) with SigV4; the Function URL uses `AWS_IAM` and grants invocation only to this distribution. The public API is available at the same origin as the website:
+
+- `GET /api/wishes` — returns the latest 50 approved wishes.
+- `POST /api/wishes` — stores a wish as `PENDING`; it does not publish immediately.
+
+The Lambda uses one DynamoDB table (`ashkin-yesodhaa-wishes`) with provisioned capacity (5 RCU / 5 WCU for the table and the same for its status index), no autoscaling, a 2-concurrent-execution reserved Lambda limit, 128 MB memory and a 3-second timeout. A per-IP limit allows up to 3 submissions in a 10-minute window. The hashed rate-limit keys expire automatically. Request bodies are limited to 2 KB; names to 50 characters and messages to 400 characters.
+
+### Approving wishes
+
+New items are stored with `status = PENDING` and `gsi1pk = STATUS#PENDING`. To publish a wish, open the DynamoDB table in the AWS console, find the item by its `wishId`, and update both attributes:
+
+1. Set `status` to `APPROVED`.
+2. Set `gsi1pk` to `STATUS#APPROVED`.
+
+Keep `gsi1sk` unchanged. The public GET endpoint queries only the approved partition. To reject a wish, delete its item. Do not change the table keys.
+
+### Local frontend development
+
+After the API infrastructure has been provisioned, create an untracked `.env.local` file in the repository root:
+
+```dotenv
+VITE_API_PROXY_TARGET=https://YOUR_CLOUDFRONT_DOMAIN
+```
+
+Replace the value with the CloudFront domain from the Terraform output. Vite will proxy local `/api/*` requests through CloudFront, so the browser does not need AWS credentials. Restart `npm run dev` after creating or changing this file.
+
+### Provisioning
+
+The existing **Provision AWS infrastructure** GitHub Actions workflow also updates the existing CloudFront distribution and creates the wishes resources. When running it again, enter the exact existing website bucket name (the value of the repository variable `AWS_S3_BUCKET`) so Terraform continues managing the same site bucket. The GitHub OIDC role must be allowed to manage the new DynamoDB table, Lambda function and Function URL, Lambda execution role/policy, CloudWatch log group, and CloudFront OAC/origin request policy in addition to its existing website permissions.
+
+The Function URL is not intended to be called directly. Do not change its authentication type to `NONE`, and do not add a public Lambda invoke permission. The API is same-origin, so no browser CORS allowlist is needed.
