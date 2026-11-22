@@ -3,6 +3,12 @@ import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Gift, Heart, ImagePlus, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import { WEDDING, IMAGES, MUSIC_URL } from "./config";
 
+async function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
 const reveal = { hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0, transition: { duration: .65, ease: [.22, 1, .36, 1] } } };
 function Heading({ eyebrow, title, subtitle, light = false }) {
   return <motion.div className={`section-heading ${light ? "light" : ""}`} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true, amount: .2 }}>
@@ -66,9 +72,13 @@ function Wishes() {
     try{
       const website=honeypotRef.current?.value?.trim()||"";
       const body=JSON.stringify({name:name.trim(),message:message.trim(),website});
+      const payloadHash=await sha256Hex(body);
       const response=await fetch("/api/wishes",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{
+          "Content-Type":"application/json",
+          "x-amz-content-sha256":payloadHash
+        },
         body
       });
       const data=await response.json().catch(()=>({}));
