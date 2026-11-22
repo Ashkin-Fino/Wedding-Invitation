@@ -27,10 +27,10 @@ dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
 
 
-def response(status_code, payload, extra_headers=None):
+def response(status_code, payload, extra_headers=None, cache_control="no-store, max-age=0"):
     headers = {
         "content-type": "application/json; charset=utf-8",
-        "cache-control": "no-store, max-age=0",
+        "cache-control": cache_control,
         "x-content-type-options": "nosniff",
         "referrer-policy": "no-referrer",
     }
@@ -203,7 +203,7 @@ def list_wishes():
         }
         for item in result.get("Items", [])
     ]
-    return response(200, {"wishes": wishes})
+    return response(200, {"wishes": wishes}, cache_control="public, max-age=30, s-maxage=30")
 
 
 def lambda_handler(event, context):
