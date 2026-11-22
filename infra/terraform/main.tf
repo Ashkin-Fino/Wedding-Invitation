@@ -219,7 +219,7 @@ resource "aws_lambda_function" "wedding_invitation_lambda" {
   source_code_hash = data.archive_file.wedding_invitation_lambda.output_base64sha256
 
   memory_size                    = 128
-  timeout                        = 3
+  timeout                        = 300
   architectures                  = ["x86_64"]
 
   environment {
