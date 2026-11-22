@@ -33,6 +33,9 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Validate Python wishes handler syntax
+        run: python -m py_compile backend/wishes/handler.py
+
       - name: Validate configuration
         shell: bash
         env:
