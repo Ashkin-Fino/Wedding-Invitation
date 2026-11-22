@@ -19,7 +19,9 @@ export const WEDDING = {
   story: [
     { date: "The beginning", title: "A beautiful first meeting", body: "Every great story has a beginning. Ours started with a moment that brought two paths together." },
     { date: "Getting closer", title: "A thousand little moments", body: "Conversations turned into memories, ordinary days became special, and friendship blossomed into something more." },
-    { date: "The question", title: "A promise for forever", body: "One heartfelt question, one beautiful answer, and the beginning of our next chapter." },
+    { date: "A little plot twist", title: "The First Rejection", body: "Not every love story follows a straight line. Our journey had its first unexpected no, too." },
+    { date: "Another unexpected turn", title: "The Second Rejection", body: "A second no became another chapter in our story, reminding us that the best things are worth patience." },
+    { date: "The moment everything changed", title: "We Said Yes", body: "And then came the yes that changed everything — the beginning of a promise for forever." },
     { date: "Our next chapter", title: "And so, forever begins", body: "With the love and blessings of our families, we're ready to begin this journey together." }
   ]
 };
