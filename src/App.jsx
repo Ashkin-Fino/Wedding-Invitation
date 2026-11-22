@@ -38,6 +38,38 @@ function MusicPlayer() {
     <AnimatePresence>{notice && <motion.div className="music-notice" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0}}>{MUSIC_URL ? "Your browser could not start audio." : "Add your licensed music file in src/config.js."}</motion.div>}</AnimatePresence>
   </div>;
 }
+function StoryPhotoCarousel() {
+  const photos = [
+    { src: "/images/story_photo/0S4A0849.JPG", caption: "And somehow, every moment led me to you." },
+    { src: "/images/story_photo/0S4A0897.JPG", caption: "A thousand little moments, one beautiful forever." },
+    { src: "/images/story_photo/img_20261122_194529_1.jpeg", caption: "My favourite place will always be beside you." }
+  ];
+  const track = useRef(null);
+  const [active, setActive] = useState(0);
+  const goTo = index => {
+    const next = Math.max(0, Math.min(photos.length - 1, index));
+    track.current?.scrollTo({ left: track.current.clientWidth * next, behavior: "smooth" });
+    setActive(next);
+  };
+  const onScroll = () => {
+    if (!track.current) return;
+    setActive(Math.round(track.current.scrollLeft / track.current.clientWidth));
+  };
+  return <div className="story-photo story-photo-carousel">
+    <div className="story-photo-track" ref={track} onScroll={onScroll} aria-label="Our story photos">
+      {photos.map((photo, index) => <figure className="story-photo-slide" key={photo.src}>
+        <img src={photo.src} alt={`Our story, photo ${index + 1} of ${photos.length}`} loading={index === 0 ? "eager" : "lazy"}/>
+        <figcaption className="photo-caption"><b>{photo.caption}</b></figcaption>
+      </figure>)}
+    </div>
+    <button className="story-photo-arrow story-photo-prev" type="button" onClick={() => goTo(active - 1)} disabled={active === 0} aria-label="Previous story photo"><ChevronLeft size={20}/></button>
+    <button className="story-photo-arrow story-photo-next" type="button" onClick={() => goTo(active + 1)} disabled={active === photos.length - 1} aria-label="Next story photo"><ChevronRight size={20}/></button>
+    <div className="story-photo-dots" aria-label={`Photo ${active + 1} of ${photos.length}`}>
+      {photos.map((photo, index) => <button key={photo.src} type="button" className={active === index ? "active" : ""} onClick={() => goTo(index)} aria-label={`Show story photo ${index + 1}`}/>)}
+    </div>
+  </div>;
+}
+
 function Wishes() {
   const [name,setName]=useState("");
   const [message,setMessage]=useState("");
@@ -222,7 +254,7 @@ export default function App() {
         </motion.div><span className="hero-side">A CELEBRATION OF LOVE</span>
       </div></section>
       <section className="intro"><Flourish/><p>Two hearts, one journey, and a lifetime of memories waiting to unfold.</p><span>WE WOULD BE HONOURED BY YOUR PRESENCE</span></section>
-      <section className="story section-pad" id="story"><div className="story-photo"><img src={IMAGES.story} alt="A couple celebrating their love" loading="lazy"/><div className="photo-caption"><b>It was always you.</b></div></div>
+      <section className="story section-pad" id="story"><StoryPhotoCarousel/>
         <div className="story-content"><Heading eyebrow="THE STORY OF US" title={<>A journey written<br/><i>in the stars</i></>} subtitle="From a first hello to a forever kind of love, every little moment brought us here."/>
           <div className="timeline">{WEDDING.story.map((item,i)=><motion.div className="timeline-item" key={item.date} variants={reveal} initial="hidden" whileInView="visible" viewport={{once:true}}><span className="timeline-dot">{String(i+1).padStart(2,"0")}</span><div><span className="timeline-date">{item.date}</span><h3>{item.title}</h3><p>{item.body}</p></div></motion.div>)}</div>
         </div>
