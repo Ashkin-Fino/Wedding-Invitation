@@ -280,7 +280,7 @@ resource "aws_cloudfront_origin_request_policy" "wedding_invitation" {
   headers_config {
     header_behavior = "whitelist"
     headers {
-      items = ["Content-Type", "CloudFront-Viewer-Address"]
+      items = ["Content-Type", "CloudFront-Viewer-Address", "x-amz-content-sha256"]
     }
   }
 
