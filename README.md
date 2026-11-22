@@ -20,10 +20,10 @@ Update `src/config.js` with the final wedding date/time, ceremony and reception 
 ## Milestone 1 functionality
 - Responsive hero, story timeline, live countdown, event details, guest wishes, photo selection, gift ideas and thank-you sections.
 - Smooth section navigation, scroll progress, reveal animations and an optional user-controlled music player.
-- Wishes, gift reservations and photo selection are frontend demonstrations only. They do not persist or transmit data yet.
+- Guest wishes are persisted in DynamoDB and are shown publicly only after manual approval. Gift reservations and photo selection remain frontend demonstrations for now.
 
 ## Deploy to AWS
-Run `npm run build`, then upload the contents of `dist/` to an S3 bucket configured for private origin access through CloudFront. Set the CloudFront default root object to `index.html`. Backend APIs, private photo uploads and durable gift reservations are planned for later milestones.
+Run `npm run build`, then upload the contents of `dist/` to an S3 bucket configured for private origin access through CloudFront. Set the CloudFront default root object to `index.html`. The wishes API is provisioned through Terraform; private photo uploads and durable gift reservations are planned for later milestones.
 
 
 ## Guest wishes backend
