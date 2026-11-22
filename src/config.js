@@ -25,7 +25,7 @@ export const WEDDING = {
   ]
 };
 export const IMAGES = {
-  hero: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=85",
+  hero: "/images/0S4A1200.JPG",
   story: "/images/0S4A0849.JPG",
   venue: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=85",
   reception: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1400&q=85",
