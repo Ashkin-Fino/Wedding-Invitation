@@ -38,7 +38,7 @@ resource "aws_dynamodb_table" "wishes" {
   hash_key     = "pk"
   range_key    = "sk"
   read_capacity  = 5
-  write_capacity = 5
+  write_capacity = 10
 
   attribute {
     name = "pk"
@@ -66,7 +66,7 @@ resource "aws_dynamodb_table" "wishes" {
     range_key       = "gsi1sk"
     projection_type = "ALL"
     read_capacity   = 10
-    write_capacity  = 5
+    write_capacity  = 10
   }
 
   ttl {
@@ -216,4 +216,9 @@ resource "aws_cloudfront_cache_policy" "wishes" {
       query_string_behavior = "none"
     }
   }
+}
+
+output "wishes_table_name" {
+  description = "DynamoDB table containing pending and approved guest wishes."
+  value       = aws_dynamodb_table.wishes.name
 }
