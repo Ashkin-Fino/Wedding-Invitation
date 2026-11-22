@@ -18,7 +18,7 @@ The role ARN is:
 arn:aws:iam::669930664580:role/Github-Deployment-Role
 ```
 
-For the Lambda execution role, grant role-management actions (including `iam:CreateRole`) on `arn:aws:iam::669930664580:role/ashkin-yesodhaa-wedding-lambda-role`. Put `iam:PassRole` in a separate statement with the `iam:PassedToService = lambda.amazonaws.com` condition; that condition does not apply to `iam:CreateRole`. Grant DynamoDB management permissions on `arn:aws:dynamodb:ap-south-1:669930664580:table/ashkin-yesodhaa-wishes` and its indexes.
+For the Lambda execution role, grant role-management actions (including `iam:CreateRole`) on `arn:aws:iam::669930664580:role/ashkin-yesodhaa-wedding-lambda-role`. Put `iam:PassRole` in a separate statement with the `iam:PassedToService = lambda.amazonaws.com` condition; that condition does not apply to `iam:CreateRole`. Grant DynamoDB management permissions on `arn:aws:dynamodb:ap-south-1:669930664580:table/ashkin-yesodhaa-wedding-wishes` and its indexes.
 
 ## 1. Configure GitHub repository variables
 

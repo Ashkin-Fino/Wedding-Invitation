@@ -349,7 +349,7 @@ resource "aws_cloudfront_distribution" "site" {
     path_pattern           = "/api/*"
     target_origin_id       = local.lambda_origin_id
     viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    allowed_methods        = ["GET", "HEAD", "POST"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     cache_policy_id        = aws_cloudfront_cache_policy.wedding_invitation.id
