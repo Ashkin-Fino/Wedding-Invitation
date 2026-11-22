@@ -1,16 +1,16 @@
 // Replace all placeholder wedding details and sample photos before publishing.
 export const WEDDING = {
   couple: "Ashkin & Yesodhaa",
-  dateLabel: "The date will be announced",
+  dateLabel: "2027-02-08T16:00:00+05:30",
   // Example format: 2027-02-14T09:00:00+05:30 (India Standard Time)
-  dateISO: "2027-12-31T09:00:00+05:30",
+  dateISO: "2027-02-08T16:00:00+05:30",
   ceremony: "Wedding Ceremony",
-  ceremonyTime: "Time to be announced",
+  ceremonyTime: "04:00 PM",
   reception: "Reception",
-  receptionTime: "Details to follow",
-  venue: "Your Wedding Venue",
-  address: "Venue address will be updated soon",
-  mapUrl: "https://maps.google.com",
+  receptionTime: "06:30 PM",
+  venue: "Uthram Auditorium, Punniyam, Kanyakumari",
+  address: "Uthram Auditorium, Punniyam, Kanyakumari",
+  mapUrl: "https://maps.app.goo.gl/FjTXH3f915TA8aqP8",
   story: [
     { date: "The beginning", title: "A beautiful first meeting", body: "Every great story has a beginning. Ours started with a moment that brought two paths together." },
     { date: "Getting closer", title: "A thousand little moments", body: "Conversations turned into memories, ordinary days became special, and friendship blossomed into something more." },
