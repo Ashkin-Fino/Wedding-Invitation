@@ -16,7 +16,7 @@ from botocore.exceptions import ClientError
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 RATE_LIMIT_SALT = os.environ["RATE_LIMIT_SALT"].encode("utf-8")
-RATE_LIMIT_MAX = 3
+RATE_LIMIT_MAX = 5
 RATE_LIMIT_WINDOW_SECONDS = 600
 MAX_BODY_BYTES = 2048
 MAX_NAME_LENGTH = 50
