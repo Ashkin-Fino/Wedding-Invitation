@@ -76,7 +76,7 @@ function Wishes() {
         setErrorMessage("Your wish was not saved because the anti-spam check could not verify this submission. Please refresh the page and try again.");
         return;
       }
-      if(response.status!==201) throw new Error(data.error||`The wishes service returned HTTP ${response.status}. Please share this code so we can diagnose the issue.`);
+      if(response.status!==201) throw new Error(data.error||"We couldn't submit your wish. Please try again.");
       setName("");
       setMessage("");
       if(honeypotRef.current) honeypotRef.current.value="";
