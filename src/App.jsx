@@ -177,6 +177,6 @@ export default function App() {
       <section className="photos section-pad" id="photos"><div className="pattern"/><Heading light eyebrow="SHARE THE JOY" title={<>Our day, through<br/><i>your eyes</i></>} subtitle="Every perspective holds a memory. Help us collect the moments we might have missed."/><PhotoUpload/></section>
       <section className="gifts section-pad" id="gifts"><Heading eyebrow="A THOUGHTFUL GESTURE" title={<>Your presence is<br/><i>our greatest gift</i></>} subtitle="If you wish to bless us with something more, we've put together a small collection of ideas for our new home."/><GiftRegistry/></section>
       <section className="thankyou" id="thank-you" style={{"--thanks":`url("${IMAGES.thanks}")`}}><div className="thankyou-content"><span className="eyebrow">UNTIL OUR PATHS MEET</span><Flourish/><h2>With love,<br/><i>and gratitude</i></h2><p>Thank you for being a part of our beautiful journey. Your love and blessings mean the world to us.</p><div className="thankyou-names">Ashkin <em>&</em> Yesodhaa</div><span className="thankyou-footer">MADE WITH LOVE · FOREVER BEGINS HERE</span></div></section>
-    </main><footer className="footer"><span>ASHKIN & YESODHAA</span><span>CELEBRATING LOVE, FAMILY & FOREVER</span><button onClick={()=>go("invitation")}>Back to top ↑</button></footer>
+    </main><footer className="footer"><span>A & Y</span><span>A CELEBRATION OF LOVE</span><button onClick={()=>go("invitation")}>Back to top ↑</button></footer>
   </div>;
 }
