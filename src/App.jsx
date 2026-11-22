@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
-import { ArrowDown, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Gift, Heart, ImagePlus, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Gift, Heart, ImagePlus, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import { WEDDING, IMAGES, MUSIC_URL } from "./config";
 
 const reveal = { hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0, transition: { duration: .65, ease: [.22, 1, .36, 1] } } };
@@ -93,7 +93,9 @@ const eventDetails = [
     time: WEDDING.ceremonyTime,
     venue: WEDDING.venue,
     address: WEDDING.address,
-    mapUrl: WEDDING.mapUrl
+    mapUrl: WEDDING.mapUrl,
+    image: IMAGES.venue,
+    imageAlt: "Wedding celebration venue"
   },
   {
     title: "Reception",
@@ -103,7 +105,9 @@ const eventDetails = [
     time: WEDDING.receptionTime,
     venue: WEDDING.receptionVenue || "Venue to be announced",
     address: WEDDING.receptionAddress || "",
-    mapUrl: WEDDING.receptionMapUrl || ""
+    mapUrl: WEDDING.receptionMapUrl || "",
+    image: IMAGES.reception,
+    imageAlt: "Reception celebration and dining venue"
   }
 ];
 function EventCarousel() {
@@ -122,13 +126,14 @@ function EventCarousel() {
     <div className="event-carousel-heading">
       <div><span className="card-kicker">EVENT {String(active + 1).padStart(2, "0")} OF 02</span><h3>{eventDetails[active].title}</h3></div>
       <div className="event-carousel-actions">
-        <span className="swipe-hint">Swipe to view {eventDetails[1 - active].title} <ArrowRight size={14}/></span>
+        <span className="swipe-hint">Swipe to view {eventDetails[1 - active].title} {active === 0 ? <ArrowRight size={14}/> : <ArrowLeft size={14}/>}</span>
         <button type="button" onClick={() => goTo(active - 1)} disabled={active === 0} aria-label="Previous event"><ChevronLeft size={18}/></button>
         <button type="button" onClick={() => goTo(active + 1)} disabled={active === eventDetails.length - 1} aria-label="Next event"><ChevronRight size={18}/></button>
       </div>
     </div>
     <div className="event-carousel-track" ref={track} onScroll={onScroll}>
       {eventDetails.map((event, index) => <article className="event-slide" key={event.title}>
+        <img className="event-slide-image" src={event.image} alt={event.imageAlt} loading="lazy"/>
         <div className="event-block"><span className="event-icon"><Heart size={18}/></span><div><span className="card-kicker">{event.ceremonyLabel}</span><h3>{event.ceremony}</h3><p><CalendarDays size={14}/>{event.date}</p><p><Clock3 size={14}/>{event.time}</p></div></div>
         <div className="event-divider">✦</div>
         <div className="event-block"><span className="event-icon"><MapPin size={18}/></span><div><span className="card-kicker">THE VENUE</span><h3>{event.venue}</h3>{event.address && <p><MapPin size={14}/>{event.address}</p>}{event.mapUrl && <a href={event.mapUrl} target="_blank" rel="noreferrer">Get directions <ArrowUpRight size={14}/></a>}</div></div>
