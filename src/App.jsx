@@ -35,7 +35,7 @@ function MusicPlayer() {
 function Wishes() {
   const [name,setName]=useState("");
   const [message,setMessage]=useState("");
-  const [website,setWebsite]=useState("");
+  const honeypotRef=useRef(null);
   const [items,setItems]=useState([]);
   const [loading,setLoading]=useState(true);
   const [submitting,setSubmitting]=useState(false);
@@ -64,6 +64,7 @@ function Wishes() {
     setStatusMessage("");
     setErrorMessage("");
     try{
+      const website=honeypotRef.current?.value?.trim()||"";
       const body=JSON.stringify({name:name.trim(),message:message.trim(),website});
       const response=await fetch("/api/wishes",{
         method:"POST",
@@ -74,7 +75,7 @@ function Wishes() {
       if(!response.ok) throw new Error(data.error||"We couldn't submit your wish. Please try again.");
       setName("");
       setMessage("");
-      setWebsite("");
+      if(honeypotRef.current) honeypotRef.current.value="";
       setStatusMessage(data.message||"Thank you. Your wish has been received for review.");
     }catch(error){
       setErrorMessage(error.message||"We couldn't submit your wish. Please try again.");
@@ -87,7 +88,7 @@ function Wishes() {
     <span className="card-kicker">LEAVE A LITTLE LOVE</span><h3>Send your wishes</h3><p className="muted">Your kind words will become a part of our story.</p>
     <label>Your name<input value={name} onChange={e=>setName(e.target.value)} placeholder="How should we call you?" maxLength={50} required/></label>
     <label>Your message<textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Write a heartfelt wish..." rows="4" maxLength={400} required/></label>
-    <div className="honeypot" aria-hidden="true"><label>Leave this field empty<input value={website} onChange={e=>setWebsite(e.target.value)} tabIndex={-1} autoComplete="off"/></label></div>
+    <div className="honeypot" aria-hidden="true"><label>Leave this field empty<input ref={honeypotRef} type="text" name="fax_number" tabIndex={-1} autoComplete="new-password" /></label></div>
     <button className="button primary" type="submit" disabled={submitting}><Send size={15}/> {submitting?"Sending...":"Send wishes"}</button>
     {statusMessage&&<span className="success" role="status"><Check size={14}/>{statusMessage}</span>}
     {errorMessage&&<span className="wish-error" role="alert">{errorMessage}</span>}
