@@ -151,7 +151,7 @@ def submit_wish(event):
 
     client_ip = request_ip(event)
     if not client_ip:
-        return response(403, {"error": "The request could not be verified."})
+        return response(400, {"error": "The request could not be verified."})
 
     try:
         if not apply_rate_limit(client_ip):
@@ -211,7 +211,7 @@ def lambda_handler(event, context):
     method = (event.get("requestContext", {}).get("http", {}).get("method") or "").upper()
 
     if path != "/api/wishes":
-        return response(404, {"error": "Not found."})
+        return response(400, {"error": "Unsupported API path."})
     if method == "GET":
         return list_wishes()
     if method == "POST":
