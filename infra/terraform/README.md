@@ -1,6 +1,6 @@
 # AWS deployment (S3 + CloudFront)
 
-The current React/Vite site is static. Runtime hosting requires a private S3 bucket and CloudFront with Origin Access Control (OAC). There is no backend, database, API Gateway, Lambda, or EC2 requirement for this milestone.
+The React/Vite site uses a private S3 bucket and CloudFront with Origin Access Control (OAC). The `/api/wishes` route is served by a Lambda function URL behind CloudFront and stores wishes in DynamoDB.
 
 ## Existing AWS prerequisites
 

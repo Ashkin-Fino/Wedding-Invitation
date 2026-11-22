@@ -29,11 +29,13 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
   name = "Managed-CachingOptimized"
 }
 
-
 locals {
   site_bucket_arn = "arn:aws:s3:::${var.bucket_name}"
-  distribution_arn = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${aws_cloudfront_distribution.site.id}"
+  lambda_origin_id = "lambda-wishes"
+  s3_origin_id     = "private-s3-${aws_s3_bucket.site.id}"
 }
+
+# Website bucket and CloudFront OAC
 
 resource "aws_s3_bucket" "site" {
   bucket        = var.bucket_name
@@ -80,6 +82,227 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
+# Wishes API resources
+
+data "aws_iam_policy_document" "wedding_invitation_lambda_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "wedding_invitation_lambda_permissions" {
+  statement {
+    sid    = "UseWishesTable"
+    effect = "Allow"
+    actions = [
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:Query",
+    ]
+    resources = [
+      aws_dynamodb_table.wedding_invitation_wishes.arn,
+      "${aws_dynamodb_table.wedding_invitation_wishes.arn}/index/status-created_at-index",
+    ]
+  }
+
+  statement {
+    sid       = "WriteFunctionLogs"
+    effect    = "Allow"
+    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    resources = ["${aws_cloudwatch_log_group.wedding_invitation.arn}:*"]
+  }
+}
+
+resource "random_password" "wedding_invitation_rate_limit_salt" {
+  length  = 64
+  special = false
+}
+
+resource "aws_dynamodb_table" "wedding_invitation_wishes" {
+  name           = "ashkin-yesodhaa-wedding-wishes"
+  billing_mode   = "PROVISIONED"
+  hash_key       = "pk"
+  range_key      = "sk"
+  read_capacity  = 5
+  write_capacity = 10
+
+  attribute {
+    name = "pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "sk"
+    type = "S"
+  }
+
+  attribute {
+    name = "gsi1pk"
+    type = "S"
+  }
+
+  attribute {
+    name = "gsi1sk"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "status-created_at-index"
+    hash_key        = "gsi1pk"
+    range_key       = "gsi1sk"
+    projection_type = "ALL"
+    read_capacity   = 10
+    write_capacity  = 10
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  tags = {
+    Project     = "AshkinYesodhaaWedding"
+    Environment = "production"
+    ManagedBy   = "Terraform"
+    Purpose     = "GuestWishes"
+  }
+}
+
+resource "aws_iam_role" "wedding_invitation_lambda" {
+  name               = "ashkin-yesodhaa-wedding-lambda-role"
+  assume_role_policy = data.aws_iam_policy_document.wedding_invitation_lambda_assume_role.json
+}
+
+resource "aws_iam_role_policy" "wedding_invitation_lambda" {
+  name   = "ashkin-yesodhaa-wedding-policy"
+  role   = aws_iam_role.wedding_invitation_lambda.id
+  policy = data.aws_iam_policy_document.wedding_invitation_lambda_permissions.json
+}
+
+resource "aws_cloudwatch_log_group" "wedding_invitation" {
+  name              = "/aws/lambda/ashkin-yesodhaa-wishes-api"
+  retention_in_days = 7
+}
+
+data "archive_file" "wedding_invitation_lambda" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../backend/wedding_invitation_lambda"
+  output_path = "${path.module}/wedding_invitation_lambda.zip"
+}
+
+resource "aws_lambda_function" "wedding_invitation_lambda" {
+  function_name = "ashkin-yesodhaa-wishes-api"
+  description   = "Invoked only through the wedding invitation CloudFront distribution."
+  role          = aws_iam_role.wedding_invitation_lambda.arn
+  runtime       = "python3.12"
+  handler       = "handler.lambda_handler"
+  filename      = data.archive_file.wedding_invitation_lambda.output_path
+  source_code_hash = data.archive_file.wedding_invitation_lambda.output_base64sha256
+
+  memory_size                    = 128
+  timeout                        = 3
+  reserved_concurrent_executions = 2
+  architectures                  = ["x86_64"]
+
+  environment {
+    variables = {
+      TABLE_NAME      = aws_dynamodb_table.wedding_invitation_wishes.name
+      RATE_LIMIT_SALT = random_password.wedding_invitation_rate_limit_salt.result
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy.wedding_invitation_lambda,
+    aws_cloudwatch_log_group.wedding_invitation,
+  ]
+
+  tags = {
+    Project     = "AshkinYesodhaaWedding"
+    Environment = "production"
+    ManagedBy   = "Terraform"
+  }
+}
+
+resource "aws_lambda_function_url" "wishes" {
+  function_name      = aws_lambda_function.wedding_invitation_lambda.function_name
+  authorization_type = "AWS_IAM"
+  invoke_mode        = "BUFFERED"
+}
+
+resource "aws_lambda_permission" "wishes_cloudfront" {
+  statement_id           = "AllowCloudFrontInvokeWishesUrl"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.wedding_invitation_lambda.function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.site.arn
+  function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_cloudfront_origin_access_control" "wishes" {
+  name                              = "${var.bucket_name}-wishes-oac"
+  description                       = "Allow only the wedding CloudFront distribution to invoke the wishes Lambda URL"
+  origin_access_control_origin_type = "lambda"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_origin_request_policy" "wishes" {
+  name    = "${var.bucket_name}-wishes-origin-policy"
+  comment = "Forward only headers required by the wishes API and abuse controls."
+
+  headers_config {
+    header_behavior = "whitelist"
+    headers {
+      items = ["Content-Type", "X-Amz-Content-Sha256", "CloudFront-Viewer-Address"]
+    }
+  }
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+
+  query_strings_config {
+    query_string_behavior = "none"
+  }
+}
+
+resource "aws_cloudfront_cache_policy" "wishes" {
+  name        = "${var.bucket_name}-wishes-get-cache"
+  comment     = "Short edge cache for approved wishes GET responses; POST requests are never cached."
+  min_ttl     = 0
+  default_ttl = 30
+  max_ttl     = 60
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
+# CloudFront
+
 resource "aws_cloudfront_distribution" "site" {
   enabled             = true
   comment             = "Ashkin & Yesodhaa wedding invitation"
@@ -88,13 +311,13 @@ resource "aws_cloudfront_distribution" "site" {
 
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
-    origin_id                = "private-s3-${aws_s3_bucket.site.id}"
+    origin_id                = local.s3_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.site.id
   }
 
   origin {
     domain_name              = trimsuffix(trimprefix(aws_lambda_function_url.wishes.function_url, "https://"), "/")
-    origin_id                = "lambda-wishes"
+    origin_id                = local.lambda_origin_id
     origin_access_control_id = aws_cloudfront_origin_access_control.wishes.id
 
     custom_origin_config {
@@ -107,9 +330,9 @@ resource "aws_cloudfront_distribution" "site" {
 
   ordered_cache_behavior {
     path_pattern           = "/api/*"
-    target_origin_id       = "lambda-wishes"
+    target_origin_id       = local.lambda_origin_id
     viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "POST"]
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     cache_policy_id        = aws_cloudfront_cache_policy.wishes.id
@@ -117,7 +340,7 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   default_cache_behavior {
-    target_origin_id       = "private-s3-${aws_s3_bucket.site.id}"
+    target_origin_id       = local.s3_origin_id
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
@@ -125,7 +348,6 @@ resource "aws_cloudfront_distribution" "site" {
     cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized.id
   }
 
-  # React Router / client-side routes should fall back to the SPA entry point.
   custom_error_response {
     error_code            = 403
     response_code         = 200
@@ -155,8 +377,8 @@ resource "aws_cloudfront_distribution" "site" {
 
 data "aws_iam_policy_document" "site_bucket" {
   statement {
-    sid     = "AllowCloudFrontReadOnly"
-    actions = ["s3:GetObject"]
+    sid       = "AllowCloudFrontReadOnly"
+    actions   = ["s3:GetObject"]
     resources = ["${local.site_bucket_arn}/*"]
 
     principals {
@@ -167,7 +389,7 @@ data "aws_iam_policy_document" "site_bucket" {
     condition {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
-      values   = [local.distribution_arn]
+      values   = [aws_cloudfront_distribution.site.arn]
     }
   }
 }
@@ -179,19 +401,26 @@ resource "aws_s3_bucket_policy" "site" {
   depends_on = [aws_s3_bucket_public_access_block.site]
 }
 
+# Outputs
+
 output "s3_bucket_name" {
-  description = "Set this as the GitHub Actions variable AWS_S3_BUCKET."
+  description = "Set as GitHub Actions variable AWS_S3_BUCKET."
   value       = aws_s3_bucket.site.bucket
 }
 
 output "cloudfront_distribution_id" {
-  description = "Set this as the GitHub Actions variable AWS_CLOUDFRONT_DISTRIBUTION_ID."
+  description = "Set as GitHub Actions variable AWS_CLOUDFRONT_DISTRIBUTION_ID."
   value       = aws_cloudfront_distribution.site.id
 }
 
 output "cloudfront_domain_name" {
   description = "Public HTTPS URL for the invitation site."
   value       = "https://${aws_cloudfront_distribution.site.domain_name}"
+}
+
+output "wishes_table_name" {
+  description = "DynamoDB table containing pending and approved guest wishes."
+  value       = aws_dynamodb_table.wedding_invitation_wishes.name
 }
 
 output "aws_region" {
