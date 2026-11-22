@@ -135,6 +135,7 @@ def parse_body(event):
 
 
 def submit_wish(event):
+    print(f"Wish received: {event}. Processing...")
     headers = {key.lower(): value for key, value in (event.get("headers") or {}).items()}
     if not headers.get("content-type", "").lower().startswith("application/json"):
         return response(415, {"error": "Content-Type must be application/json."})
@@ -161,6 +162,8 @@ def submit_wish(event):
                 {"retry-after": str(RATE_LIMIT_WINDOW_SECONDS)},
             )
 
+        print("Wish validated. Saving to database:", payload)
+
         wish_id = str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         table.put_item(
@@ -177,6 +180,7 @@ def submit_wish(event):
             },
             ConditionExpression="attribute_not_exists(pk)",
         )
+        print("Successfully saved wish:", wish_id)
     except ClientError:
         return response(503, {"error": "We could not save your wish right now. Please try again later."})
 
@@ -184,6 +188,7 @@ def submit_wish(event):
 
 
 def list_wishes():
+    print("Listing wishes")
     try:
         result = table.query(
             IndexName="status-created_at-index",
@@ -208,6 +213,7 @@ def list_wishes():
 
 def lambda_handler(event, context):
     path = event.get("rawPath", "")
+    print("Received request:", path, event.get("requestContext", {}).get("http", {}))
     method = (event.get("requestContext", {}).get("http", {}).get("method") or "").upper()
 
     if path != "/api/wishes":
