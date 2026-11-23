@@ -42,7 +42,7 @@ New valid wishes are stored directly with `status = APPROVED` and `gsi1pk = STAT
 
 The gift list is owned by `backend/wedding_invitation_lambda/gifts.json`. The frontend does not maintain a separate gift list. The Lambda returns each catalogue entry together with its current reservation status from DynamoDB through `GET /api/gifts`.
 
-To add or edit a gift, update `gifts.json` and commit the change. Each gift must have a unique, stable `id`, plus `name`, `detail`, and `image` fields. Use an image path or HTTPS image URL that is accessible to the website. Then run the existing **Provision AWS infrastructure** workflow to package and deploy the updated Lambda catalogue, followed by **Deploy wedding invitation to AWS** to publish any frontend changes (the catalogue itself is served by Lambda).
+To add or edit a gift, update `gifts.json` and commit the change. Each gift must have a unique, stable `id`, plus `name`, `detail`, and `image` fields. Use an image path or HTTPS image URL that is accessible to the website. Then run the existing **Provision AWS infrastructure** workflow to package and deploy the updated Lambda catalogue. A frontend deployment is not needed for catalogue-only changes; run **Deploy wedding invitation to AWS** only when you also change frontend code or static assets.
 
 DynamoDB stores reservation state, not duplicate catalogue metadata. An available gift has no reservation item yet; its status is derived as `AVAILABLE`. A reservation item is created only when a guest reserves that gift. This is why the table may contain one gift item even while the catalogue contains several gifts.
 
