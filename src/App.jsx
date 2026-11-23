@@ -161,15 +161,10 @@ function PhotoUpload() {
     <small>Photo sharing will open after the wedding. Uploads will be stored privately once connected.</small>
   </div>;
 }
-const giftSeed=[
-  { id: "home", name: "A little something for our home", detail: "A thoughtful addition to our new beginnings.", image: IMAGES.gifts[0] },
-  { id: "experience", name: "A memory-making experience", detail: "Help us create a memory to treasure.", image: IMAGES.gifts[1] },
-  { id: "keepsake", name: "A keepsake for forever", detail: "A meaningful keepsake for our journey.", image: IMAGES.gifts[2] }
-];
 const GIFT_TOKEN_STORAGE_KEY = "wedding-gift-reservation-tokens-v1";
 
 function GiftRegistry() {
-  const [gifts, setGifts] = useState({});
+  const [gifts, setGifts] = useState([]);
   const [reservationTokens, setReservationTokens] = useState(() => {
     try { return JSON.parse(window.localStorage.getItem(GIFT_TOKEN_STORAGE_KEY) || "{}"); }
     catch { return {}; }
@@ -188,12 +183,11 @@ function GiftRegistry() {
     try {
       const response = await fetch("/api/gifts", { headers: { Accept: "application/json" }, cache: "no-store" });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "Gift reservations are temporarily unavailable.");
-      const next = {};
-      (Array.isArray(data.gifts) ? data.gifts : []).forEach(gift => { next[gift.giftId] = gift; });
-      setGifts(next);
+      if (!response.ok) throw new Error(data.error || "Gift list is temporarily unavailable.");
+      if (!Array.isArray(data.gifts)) throw new Error("The gift list response was invalid.");
+      setGifts(data.gifts);
     } catch (error) {
-      setLoadError(error.message || "We couldn't load gift reservations. Please try again.");
+      setLoadError(error.message || "We couldn't load gifts. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -241,11 +235,11 @@ function GiftRegistry() {
     setActionError("");
     try {
       const data = await postGiftAction("/api/gifts/reserve", {
-        giftId: selectedGift.id,
+        giftId: selectedGift.giftId,
         name: reservationName.trim()
       });
-      setReservationTokens(current => ({ ...current, [selectedGift.id]: data.reservationToken }));
-      setGifts(current => ({ ...current, [selectedGift.id]: { giftId: selectedGift.id, status: "RESERVED" } }));
+      setReservationTokens(current => ({ ...current, [selectedGift.giftId]: data.reservationToken }));
+      setGifts(current => current.map(gift => gift.giftId === selectedGift.giftId ? { ...gift, status: "RESERVED" } : gift));
       setToast("Your gift has been reserved. Thank you!");
       setSelectedGift(null);
       setReservationName("");
@@ -258,18 +252,18 @@ function GiftRegistry() {
   };
 
   const unreserve = async gift => {
-    const token = reservationTokens[gift.id];
+    const token = reservationTokens[gift.giftId];
     if (!token || saving) return;
     setSaving(true);
     setActionError("");
     try {
-      await postGiftAction("/api/gifts/unreserve", { giftId: gift.id, reservationToken: token });
+      await postGiftAction("/api/gifts/unreserve", { giftId: gift.giftId, reservationToken: token });
       setReservationTokens(current => {
         const next = { ...current };
-        delete next[gift.id];
+        delete next[gift.giftId];
         return next;
       });
-      setGifts(current => ({ ...current, [gift.id]: { giftId: gift.id, status: "AVAILABLE" } }));
+      setGifts(current => current.map(item => item.giftId === gift.giftId ? { ...item, status: "AVAILABLE" } : item));
       setToast("Your reservation has been cancelled.");
       window.setTimeout(() => setToast(""), 3000);
     } catch (error) {
@@ -281,12 +275,14 @@ function GiftRegistry() {
 
   return <>
     {loadError && <div className="gift-load-error" role="alert">{loadError}<button type="button" onClick={loadGifts}>Try again</button></div>}
+    {loading && !gifts.length && <p className="wish-empty">Loading gifts...</p>}
+    {!loading && !loadError && !gifts.length && <p className="wish-empty">No gifts have been added yet.</p>}
     <div className="gift-grid">
-      {giftSeed.map((gift, index) => {
-        const status = gifts[gift.id]?.status || "AVAILABLE";
-        const isMine = status === "RESERVED" && Boolean(reservationTokens[gift.id]);
-        return <motion.article className="gift-card" key={gift.id} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} transition={{ delay: index * .08 }}>
-          <div className="gift-image"><img src={gift.image} alt="" loading="lazy"/><span>0{index + 1}</span></div>
+      {gifts.map((gift, index) => {
+        const status = gift.status || "AVAILABLE";
+        const isMine = status === "RESERVED" && Boolean(reservationTokens[gift.giftId]);
+        return <motion.article className="gift-card" key={gift.giftId} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} transition={{ delay: index * .08 }}>
+          <div className="gift-image"><img src={gift.image} alt={gift.name} loading="lazy"/><span>{String(index + 1).padStart(2, "0")}</span></div>
           <div className="gift-info">
             <span className="card-kicker">A THOUGHTFUL GESTURE</span>
             <h3>{gift.name}</h3>
