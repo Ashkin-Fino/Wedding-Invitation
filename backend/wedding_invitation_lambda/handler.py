@@ -23,7 +23,12 @@ MAX_BODY_BYTES = 2048
 MAX_NAME_LENGTH = 50
 MAX_MESSAGE_LENGTH = 400
 PUBLIC_WISH_LIMIT = 4
-GIFT_IDS = ("home", "experience", "keepsake")
+with open(os.path.join(os.path.dirname(__file__), "gifts.json"), encoding="utf-8") as gifts_file:
+    GIFT_CATALOG = json.load(gifts_file)
+
+GIFT_BY_ID = {gift["id"]: gift for gift in GIFT_CATALOG}
+if len(GIFT_BY_ID) != len(GIFT_CATALOG):
+    raise ValueError("Gift catalogue contains duplicate IDs")
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
@@ -242,7 +247,7 @@ def parse_gift_body(event, allowed_fields):
 
 
 def gift_id_is_valid(gift_id):
-    return isinstance(gift_id, str) and gift_id in GIFT_IDS
+    return isinstance(gift_id, str) and gift_id in GIFT_BY_ID
 
 
 def check_gift_request_limit(event):
@@ -264,11 +269,18 @@ def check_gift_request_limit(event):
 def list_gifts():
     gifts = []
     try:
-        for gift_id in GIFT_IDS:
+        for gift in GIFT_CATALOG:
+            gift_id = gift["id"]
             result = table.get_item(Key={"pk": f"GIFT#{gift_id}", "sk": "RESERVATION"})
             item = result.get("Item") or {}
             status = "RESERVED" if item.get("status") == "RESERVED" else "AVAILABLE"
-            gifts.append({"giftId": gift_id, "status": status})
+            gifts.append({
+                "giftId": gift_id,
+                "name": gift["name"],
+                "detail": gift["detail"],
+                "image": gift["image"],
+                "status": status,
+            })
     except ClientError:
         return response(503, {"error": "Gift reservations are temporarily unavailable."})
     return response(200, {"gifts": gifts})
