@@ -6,6 +6,12 @@
     "image": "/images/gifts/knives-set.jpeg"
   },
   {
+    "id": "night_lamp",
+    "name": "Night Lamp",
+    "detail": "A warm and comforting wedding gift for our new home.",
+    "image": "/images/gifts/night-lamp.jpeg"
+  },
+  {
     "id": "mixie",
     "name": "Mixie",
     "detail": "Help us blend favorite flavors into joyful mornings and festive married-life celebrations.",
@@ -16,6 +22,18 @@
     "name": "Wet Grinder",
     "detail": "Help us carry cherished family recipes into our new home and make fresh traditions together.",
     "image": "/images/gifts/grinder.jpeg"
+  },  
+  {
+    "id": "hair_styler",
+    "name": "Hair Styler",
+    "detail": "A thoughtful wedding gift to help us look our best and feel confident as we embark on our journey together.",
+    "image": "/images/gifts/hair-styler.jpeg"
+  },  
+  {
+    "id": "dressing_table",
+    "name": "Dressing Table",
+    "detail": "A lovely wedding gift for a new chapter filled with love, confidence, and shared dreams.",
+    "image": "/images/gifts/dressing-table.jpeg"
   },
   {
     "id": "air_fryer",
@@ -60,21 +78,15 @@
     "image": "/images/gifts/camera.jpg"
   },
   {
-    "id": "dressing_table",
-    "name": "Dressing Table",
-    "detail": "A lovely wedding gift for a new chapter filled with love, confidence, and shared dreams.",
-    "image": "/images/gifts/dressing-table.jpeg"
-  },
-  {
     "id": "washing_machine",
     "name": "Washing Machine",
     "detail": "A practical wedding gift to simplify our daily routines and make our home more comfortable.",
     "image": "/images/gifts/washing-machine.webp"
   },
   {
-    "id": "hair_styler",
-    "name": "Hair Styler",
-    "detail": "A thoughtful wedding gift to help us look our best and feel confident as we embark on our journey together.",
-    "image": "/images/gifts/hair-styler.webp"
+    "id": "fridge",
+    "name": "Fridge",
+    "detail": "A wedding gift to keep our food fresh and our home cool.",
+    "image": "/images/gifts/fridge.jpeg"
   }
 ]
