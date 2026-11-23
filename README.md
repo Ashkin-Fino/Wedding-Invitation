@@ -20,7 +20,7 @@ Update `src/config.js` with the final wedding date/time, ceremony and reception 
 ## Milestone 1 functionality
 - Responsive hero, story timeline, live countdown, event details, guest wishes, photo selection, gift ideas and thank-you sections.
 - Smooth section navigation, scroll progress, reveal animations and an optional user-controlled music player.
-- Guest wishes are persisted in DynamoDB and are shown publicly only after manual approval. Gift reservations and photo selection remain frontend demonstrations for now.
+- Guest wishes and gift reservations are backed by the existing Lambda and DynamoDB table. The gift catalogue is maintained in the backend `gifts.json` file and served to the frontend by the API.
 
 ## Deploy to AWS
 Run `npm run build`, then upload the contents of `dist/` to an S3 bucket configured for private origin access through CloudFront. Set the CloudFront default root object to `index.html`. The wishes API is provisioned through Terraform; private photo uploads and durable gift reservations are planned for later milestones.
@@ -38,6 +38,14 @@ The Lambda uses one DynamoDB table (`ashkin-yesodhaa-wedding-wishes`) with provi
 ### Approving wishes
 
 New valid wishes are stored directly with `status = APPROVED` and `gsi1pk = STATUS#APPROVED`, so they are eligible for the public feed immediately. To remove an unwanted wish, delete its item from the DynamoDB table. The feed can take up to 30 seconds to reflect a deletion because the GET response is briefly cached at CloudFront. Do not change the table keys.
+### Gift catalogue and reservations
+
+The gift list is owned by `backend/wedding_invitation_lambda/gifts.json`. The frontend does not maintain a separate gift list. The Lambda returns each catalogue entry together with its current reservation status from DynamoDB through `GET /api/gifts`.
+
+To add or edit a gift, update `gifts.json` and commit the change. Each gift must have a unique, stable `id`, plus `name`, `detail`, and `image` fields. Use an image path or HTTPS image URL that is accessible to the website. Then run the existing **Provision AWS infrastructure** workflow to package and deploy the updated Lambda catalogue, followed by **Deploy wedding invitation to AWS** to publish any frontend changes (the catalogue itself is served by Lambda).
+
+DynamoDB stores reservation state, not duplicate catalogue metadata. An available gift has no reservation item yet; its status is derived as `AVAILABLE`. A reservation item is created only when a guest reserves that gift. This is why the table may contain one gift item even while the catalogue contains several gifts.
+
 ### Local frontend development
 
 After the API infrastructure has been provisioned, create an untracked `.env.local` file in the repository root:
