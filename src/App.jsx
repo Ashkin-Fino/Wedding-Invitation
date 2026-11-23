@@ -162,18 +162,172 @@ function PhotoUpload() {
   </div>;
 }
 const giftSeed=[
-  ["A little something for our home","A thoughtful addition to our new beginnings.",IMAGES.gifts[0]],
-  ["A memory-making experience","Help us create a memory to treasure.",IMAGES.gifts[1]],
-  ["A keepsake for forever","A meaningful keepsake for our journey.",IMAGES.gifts[2]]
+  { id: "home", name: "A little something for our home", detail: "A thoughtful addition to our new beginnings.", image: IMAGES.gifts[0] },
+  { id: "experience", name: "A memory-making experience", detail: "Help us create a memory to treasure.", image: IMAGES.gifts[1] },
+  { id: "keepsake", name: "A keepsake for forever", detail: "A meaningful keepsake for our journey.", image: IMAGES.gifts[2] }
 ];
+const GIFT_TOKEN_STORAGE_KEY = "wedding-gift-reservation-tokens-v1";
+
 function GiftRegistry() {
-  const [reserved,setReserved]=useState([]); const [toast,setToast]=useState("");
-  const reserve=name=>{setReserved(old=>[...old,name]);setToast(name);window.setTimeout(()=>setToast(""),2500);};
-  return <><div className="gift-grid">{giftSeed.map(([name,detail,image],i)=><motion.article className="gift-card" key={name} variants={reveal} initial="hidden" whileInView="visible" viewport={{once:true}} transition={{delay:i*.08}}>
-    <div className="gift-image"><img src={image} alt="" loading="lazy"/><span>0{i+1}</span></div><div className="gift-info"><span className="card-kicker">A THOUGHTFUL GESTURE</span><h3>{name}</h3><p>{detail}</p>
-      <div className="gift-bottom"><span>Optional</span><button className={reserved.includes(name)?"reserve reserved":"reserve"} disabled={reserved.includes(name)} onClick={()=>reserve(name)}>{reserved.includes(name)?<><Check size={13}/> Reserved</>:<>Reserve <ArrowUpRight size={13}/></>}</button></div>
-    </div></motion.article>)}</div><p className="demo-note">Reservations are a visual demo and reset when the page is refreshed. No payment is collected.</p>
-    <AnimatePresence>{toast&&<motion.div className="toast" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} exit={{opacity:0}}>Thank you for choosing: {toast}</motion.div>}</AnimatePresence></>;
+  const [gifts, setGifts] = useState({});
+  const [reservationTokens, setReservationTokens] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem(GIFT_TOKEN_STORAGE_KEY) || "{}"); }
+    catch { return {}; }
+  });
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [selectedGift, setSelectedGift] = useState(null);
+  const [reservationName, setReservationName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [toast, setToast] = useState("");
+
+  const loadGifts = async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const response = await fetch("/api/gifts", { headers: { Accept: "application/json" }, cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Gift reservations are temporarily unavailable.");
+      const next = {};
+      (Array.isArray(data.gifts) ? data.gifts : []).forEach(gift => { next[gift.giftId] = gift; });
+      setGifts(next);
+    } catch (error) {
+      setLoadError(error.message || "We couldn't load gift reservations. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadGifts(); }, []);
+  useEffect(() => {
+    try { window.localStorage.setItem(GIFT_TOKEN_STORAGE_KEY, JSON.stringify(reservationTokens)); }
+    catch { /* The current page session can still use the in-memory token. */ }
+  }, [reservationTokens]);
+
+  const postGiftAction = async (path, payload) => {
+    const body = JSON.stringify(payload);
+    const payloadHash = await sha256Hex(body);
+    const response = await fetch(path, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-amz-content-sha256": payloadHash
+      },
+      body
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "We couldn't complete this action. Please try again.");
+    return data;
+  };
+
+  const openReservation = gift => {
+    setSelectedGift(gift);
+    setReservationName("");
+    setActionError("");
+  };
+
+  const closeReservation = () => {
+    if (saving) return;
+    setSelectedGift(null);
+    setReservationName("");
+    setActionError("");
+  };
+
+  const confirmReservation = async event => {
+    event.preventDefault();
+    if (!selectedGift || saving || !reservationName.trim()) return;
+    setSaving(true);
+    setActionError("");
+    try {
+      const data = await postGiftAction("/api/gifts/reserve", {
+        giftId: selectedGift.id,
+        name: reservationName.trim()
+      });
+      setReservationTokens(current => ({ ...current, [selectedGift.id]: data.reservationToken }));
+      setGifts(current => ({ ...current, [selectedGift.id]: { giftId: selectedGift.id, status: "RESERVED" } }));
+      setToast("Your gift has been reserved. Thank you!");
+      setSelectedGift(null);
+      setReservationName("");
+      window.setTimeout(() => setToast(""), 3000);
+    } catch (error) {
+      setActionError(error.message || "We couldn't reserve this gift. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const unreserve = async gift => {
+    const token = reservationTokens[gift.id];
+    if (!token || saving) return;
+    setSaving(true);
+    setActionError("");
+    try {
+      await postGiftAction("/api/gifts/unreserve", { giftId: gift.id, reservationToken: token });
+      setReservationTokens(current => {
+        const next = { ...current };
+        delete next[gift.id];
+        return next;
+      });
+      setGifts(current => ({ ...current, [gift.id]: { giftId: gift.id, status: "AVAILABLE" } }));
+      setToast("Your reservation has been cancelled.");
+      window.setTimeout(() => setToast(""), 3000);
+    } catch (error) {
+      setActionError(error.message || "We couldn't cancel this reservation. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return <>
+    {loadError && <div className="gift-load-error" role="alert">{loadError}<button type="button" onClick={loadGifts}>Try again</button></div>}
+    <div className="gift-grid">
+      {giftSeed.map((gift, index) => {
+        const status = gifts[gift.id]?.status || "AVAILABLE";
+        const isMine = status === "RESERVED" && Boolean(reservationTokens[gift.id]);
+        return <motion.article className="gift-card" key={gift.id} variants={reveal} initial="hidden" whileInView="visible" viewport={{ once: true }} transition={{ delay: index * .08 }}>
+          <div className="gift-image"><img src={gift.image} alt="" loading="lazy"/><span>0{index + 1}</span></div>
+          <div className="gift-info">
+            <span className="card-kicker">A THOUGHTFUL GESTURE</span>
+            <h3>{gift.name}</h3>
+            <p>{gift.detail}</p>
+            <div className="gift-bottom">
+              <span>{loading ? "Checking..." : status === "RESERVED" ? (isMine ? "Reserved by you" : "Already reserved") : "Optional"}</span>
+              {status === "AVAILABLE" ? (
+                <button className="reserve" type="button" disabled={loading || saving || Boolean(loadError)} onClick={() => openReservation(gift)}>Reserve <ArrowUpRight size={13}/></button>
+              ) : isMine ? (
+                <button className="reserve unreserve" type="button" disabled={saving} onClick={() => unreserve(gift)}><X size={13}/> Unreserve</button>
+              ) : (
+                <span className="reserve reserved"><Check size={13}/> Reserved</span>
+              )}
+            </div>
+          </div>
+        </motion.article>;
+      })}
+    </div>
+    <p className="demo-note">Reservations are optional. No payment is collected, and each gift can be reserved by one guest.</p>
+    {actionError && !selectedGift && <p className="gift-action-error" role="alert">{actionError}</p>}
+    <AnimatePresence>
+      {selectedGift && <motion.div className="gift-modal-backdrop" role="presentation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={event => { if (event.target === event.currentTarget) closeReservation(); }}>
+        <motion.div className="gift-modal" role="dialog" aria-modal="true" aria-labelledby="gift-modal-title" initial={{ opacity: 0, y: 16, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: .98 }}>
+          <button className="gift-modal-close" type="button" onClick={closeReservation} disabled={saving} aria-label="Close"><X size={18}/></button>
+          <span className="card-kicker">A THOUGHTFUL GESTURE</span>
+          <h3 id="gift-modal-title">Reserve this gift</h3>
+          <p>Thank you for thinking of us. Please confirm your name to reserve <strong>{selectedGift.name}</strong>.</p>
+          <form onSubmit={confirmReservation}>
+            <label htmlFor="gift-reservation-name">Your name</label>
+            <input id="gift-reservation-name" value={reservationName} onChange={event => setReservationName(event.target.value)} placeholder="Enter your name" maxLength={50} autoFocus required/>
+            {actionError && <p className="gift-action-error" role="alert">{actionError}</p>}
+            <div className="gift-modal-actions">
+              <button className="button gift-cancel" type="button" onClick={closeReservation} disabled={saving}>Cancel</button>
+              <button className="button primary" type="submit" disabled={saving || !reservationName.trim()}>{saving ? "Reserving..." : "Confirm reservation"}</button>
+            </div>
+          </form>
+        </motion.div>
+      </motion.div>}
+    </AnimatePresence>
+    <AnimatePresence>{toast && <motion.div className="toast" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>{toast}</motion.div>}</AnimatePresence>
+  </>;
 }
 
 const eventDetails = [
