@@ -1,75 +1,80 @@
 [
-  
   {
     "id": "knives_set",
     "name": "Kitchen Knife Set",
     "detail": "A wedding blessing for our kitchen, as we begin a lifetime of delicious meals together.",
-    "image": "public/images/gifts/knives-set.jpeg"
+    "image": "/images/gifts/knives-set.jpeg"
   },
   {
     "id": "mixie",
     "name": "Mixie",
     "detail": "Help us blend favorite flavors into joyful mornings and festive married-life celebrations.",
-    "image": "public/images/gifts/mixie.jpeg"
+    "image": "/images/gifts/mixie.jpeg"
   },
   {
     "id": "grinder",
     "name": "Wet Grinder",
     "detail": "Help us carry cherished family recipes into our new home and make fresh traditions together.",
-    "image": "public/images/gifts/grinder.jpeg"
+    "image": "/images/gifts/grinder.jpeg"
   },
   {
     "id": "air_fryer",
     "name": "Air Fryer",
     "detail": "A thoughtful wedding gift for crisp snacks, cozy dinners, and many happy feasts ahead.",
-    "image": "public/images/gifts/air-fryer.jpeg"
+    "image": "/images/gifts/air-fryer.jpeg"
   },
   {
     "id": "induction_cooktop",
     "name": "Induction Cooktop",
     "detail": "For the first meals we cook as newlyweds and the warmth we will share for years.",
-    "image": "public/images/gifts/induction-cooktop.jpeg"
+    "image": "/images/gifts/induction-cooktop.jpeg"
   },
   {
     "id": "otg",
     "name": "OTG Oven",
     "detail": "Bake sweetness into our married life with cakes and treats for many celebrations together.",
-    "image": "public/images/gifts/otg-oven.jpeg"
+    "image": "/images/gifts/otg-oven.jpeg"
   },
   {
     "id": "iron_box",
     "name": "Steam Iron",
     "detail": "A practical wedding blessing to keep us polished for life’s beautiful new adventures.",
-    "image": "public/images/gifts/iron-box.jpeg"
+    "image": "/images/gifts/iron-box.jpeg"
   },
   {
     "id": "water_purifier",
     "name": "Water Purifier",
     "detail": "A meaningful wedding wish for health, happiness, and fresh beginnings in our home.",
-    "image": "public/images/gifts/water-purifier.jpeg"
+    "image": "/images/gifts/water-purifier.jpeg"
   },
   {
     "id": "water_heater",
     "name": "Water Heater",
     "detail": "Warm comfort for our newlywed days and every cozy morning in our home ahead.",
-    "image": "public/images/gifts/water-heater.jpeg"
+    "image": "/images/gifts/water-heater.jpeg"
   },
   {
     "id": "camera",
     "name": "Camera",
     "detail": "Help us capture our wedding smiles and preserve the beautiful story our marriage will tell.",
-    "image": "public/images/gifts/camera.jpeg"
+    "image": "/images/gifts/camera.jpg"
   },
   {
     "id": "dressing_table",
     "name": "Dressing Table",
     "detail": "A lovely wedding gift for a new chapter filled with love, confidence, and shared dreams.",
-    "image": "public/images/gifts/dressing-table.jpeg"
+    "image": "/images/gifts/dressing-table.jpeg"
   },
   {
     "id": "washing_machine",
     "name": "Washing Machine",
     "detail": "A practical wedding gift to simplify our daily routines and make our home more comfortable.",
-    "image": "public/images/gifts/washing-machine.jpeg"
+    "image": "/images/gifts/washing-machine.webp"
+  },
+  {
+    "id": "hair_styler",
+    "name": "Hair Styler",
+    "detail": "A thoughtful wedding gift to help us look our best and feel confident as we embark on our journey together.",
+    "image": "/images/gifts/hair-styler.webp"
   }
 ]
