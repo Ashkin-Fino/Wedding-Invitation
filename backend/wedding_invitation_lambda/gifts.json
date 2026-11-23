@@ -12,6 +12,12 @@
     "image": "/images/gifts/night-lamp.jpeg"
   },
   {
+    "id": "fruit_juicer",
+    "name": "Fruit Juicer",
+    "detail": "A refreshing wedding gift to enjoy fresh, healthy juices together.",
+    "image": "/images/gifts/fruit-juicer.jpeg"
+  },
+  {
     "id": "mixie",
     "name": "Mixie",
     "detail": "Help us blend favorite flavors into joyful mornings and festive married-life celebrations.",
