@@ -102,6 +102,7 @@ data "aws_iam_policy_document" "wedding_invitation_lambda_permissions" {
     effect = "Allow"
     actions = [
       "dynamodb:PutItem",
+      "dynamodb:GetItem",
       "dynamodb:UpdateItem",
       "dynamodb:Query",
     ]
