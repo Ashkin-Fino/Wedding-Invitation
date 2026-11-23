@@ -5,6 +5,7 @@ import ipaddress
 import json
 import os
 import re
+import secrets
 import time
 import unicodedata
 import uuid
@@ -22,6 +23,7 @@ MAX_BODY_BYTES = 2048
 MAX_NAME_LENGTH = 50
 MAX_MESSAGE_LENGTH = 400
 PUBLIC_WISH_LIMIT = 4
+GIFT_IDS = ("home", "experience", "keepsake")
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
@@ -211,15 +213,167 @@ def list_wishes():
     return response(200, {"wishes": wishes}, cache_control="public, max-age=30, s-maxage=30")
 
 
+
+def parse_gift_body(event, allowed_fields):
+    headers = {key.lower(): value for key, value in (event.get("headers") or {}).items()}
+    if not headers.get("content-type", "").lower().startswith("application/json"):
+        return None, response(415, {"error": "Content-Type must be application/json."})
+
+    body = event.get("body") or ""
+    if event.get("isBase64Encoded"):
+        try:
+            raw = base64.b64decode(body, validate=True)
+        except (ValueError, TypeError):
+            return None, response(400, {"error": "Invalid request body."})
+    else:
+        raw = body.encode("utf-8") if isinstance(body, str) else b""
+
+    if len(raw) > MAX_BODY_BYTES:
+        return None, response(413, {"error": "The request is too large."})
+
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None, response(400, {"error": "Invalid request body."})
+
+    if not isinstance(payload, dict) or set(payload) != set(allowed_fields):
+        return None, response(400, {"error": "Invalid request body."})
+    return payload, None
+
+
+def gift_id_is_valid(gift_id):
+    return isinstance(gift_id, str) and gift_id in GIFT_IDS
+
+
+def check_gift_request_limit(event):
+    client_ip = request_ip(event)
+    if not client_ip:
+        return response(400, {"error": "The request could not be verified."})
+    try:
+        if not apply_rate_limit(client_ip):
+            return response(
+                429,
+                {"error": "Please wait a few minutes before trying again."},
+                {"retry-after": str(RATE_LIMIT_WINDOW_SECONDS)},
+            )
+    except ClientError:
+        return response(503, {"error": "Gift reservations are temporarily unavailable."})
+    return None
+
+
+def list_gifts():
+    gifts = []
+    try:
+        for gift_id in GIFT_IDS:
+            result = table.get_item(Key={"pk": f"GIFT#{gift_id}", "sk": "RESERVATION"})
+            item = result.get("Item") or {}
+            status = "RESERVED" if item.get("status") == "RESERVED" else "AVAILABLE"
+            gifts.append({"giftId": gift_id, "status": status})
+    except ClientError:
+        return response(503, {"error": "Gift reservations are temporarily unavailable."})
+    return response(200, {"gifts": gifts})
+
+
+def reserve_gift(event):
+    payload, error_response = parse_gift_body(event, {"giftId", "name"})
+    if error_response:
+        return error_response
+
+    gift_id = payload.get("giftId")
+    name = clean_text(payload.get("name"))
+    if not gift_id_is_valid(gift_id) or not name or len(name) > MAX_NAME_LENGTH:
+        return response(400, {"error": "Enter a valid name and select a valid gift."})
+
+    limit_response = check_gift_request_limit(event)
+    if limit_response:
+        return limit_response
+
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    try:
+        table.update_item(
+            Key={"pk": f"GIFT#{gift_id}", "sk": "RESERVATION"},
+            UpdateExpression="SET #status = :reserved, reserved_by = :name, reservation_token_hash = :token_hash, created_at = :created_at",
+            ConditionExpression="attribute_not_exists(#status) OR #status = :available",
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={
+                ":reserved": "RESERVED",
+                ":available": "AVAILABLE",
+                ":name": name,
+                ":token_hash": token_hash,
+                ":created_at": created_at,
+            },
+        )
+    except ClientError as error:
+        code = error.response.get("Error", {}).get("Code", "")
+        if code == "ConditionalCheckFailedException":
+            return response(409, {"error": "Sorry, this gift has just been reserved by someone else."})
+        return response(503, {"error": "We couldn't reserve this gift right now. Please try again."})
+
+    print(f"Gift reservation created: {gift_id}")
+    return response(201, {"message": "Gift reserved successfully.", "reservationToken": token})
+
+
+def unreserve_gift(event):
+    payload, error_response = parse_gift_body(event, {"giftId", "reservationToken"})
+    if error_response:
+        return error_response
+
+    gift_id = payload.get("giftId")
+    token = payload.get("reservationToken")
+    if not gift_id_is_valid(gift_id) or not isinstance(token, str) or not 32 <= len(token) <= 128:
+        return response(400, {"error": "Invalid reservation details."})
+
+    limit_response = check_gift_request_limit(event)
+    if limit_response:
+        return limit_response
+
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    try:
+        table.update_item(
+            Key={"pk": f"GIFT#{gift_id}", "sk": "RESERVATION"},
+            UpdateExpression="SET #status = :available REMOVE reserved_by, reservation_token_hash, created_at",
+            ConditionExpression="#status = :reserved AND reservation_token_hash = :token_hash",
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={
+                ":available": "AVAILABLE",
+                ":reserved": "RESERVED",
+                ":token_hash": token_hash,
+            },
+        )
+    except ClientError as error:
+        code = error.response.get("Error", {}).get("Code", "")
+        if code == "ConditionalCheckFailedException":
+            return response(403, {"error": "Only the guest who made this reservation can unreserve it."})
+        return response(503, {"error": "We couldn't cancel this reservation right now. Please try again."})
+
+    print(f"Gift reservation cancelled: {gift_id}")
+    return response(200, {"message": "Reservation cancelled successfully."})
+
 def lambda_handler(event, context):
     path = event.get("rawPath", "")
-    print("Received request:", path, event.get("requestContext", {}).get("http", {}))
     method = (event.get("requestContext", {}).get("http", {}).get("method") or "").upper()
+    print("Received request:", path, method)
 
-    if path != "/api/wishes":
-        return response(400, {"error": "Unsupported API path."})
-    if method == "GET":
-        return list_wishes()
-    if method == "POST":
-        return submit_wish(event)
-    return response(405, {"error": "Method not allowed."}, {"allow": "GET, POST"})
+    if path == "/api/wishes":
+        if method == "GET":
+            return list_wishes()
+        if method == "POST":
+            return submit_wish(event)
+        return response(405, {"error": "Method not allowed."}, {"allow": "GET, POST"})
+
+    if path == "/api/gifts":
+        if method == "GET":
+            return list_gifts()
+        return response(405, {"error": "Method not allowed."}, {"allow": "GET"})
+
+    if path == "/api/gifts/reserve" and method == "POST":
+        return reserve_gift(event)
+    if path == "/api/gifts/unreserve" and method == "POST":
+        return unreserve_gift(event)
+    if path in ("/api/gifts/reserve", "/api/gifts/unreserve"):
+        return response(405, {"error": "Method not allowed."}, {"allow": "POST"})
+
+    return response(404, {"error": "Unsupported API path."})
