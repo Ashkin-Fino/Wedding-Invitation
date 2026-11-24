@@ -34,7 +34,13 @@
     "name": "Hair Styler",
     "detail": "A thoughtful wedding gift to help us look our best and feel confident as we embark on our journey together.",
     "image": "/images/gifts/hair-styler.jpeg"
-  },  
+  },
+  {
+    "id": "vaccum_cleaner",
+    "name": "Vacuum Cleaner",
+    "detail": "A practical wedding gift to keep our home clean and comfortable.",
+    "image": "/images/gifts/vaccum-cleaner.jpeg"
+  },
   {
     "id": "dressing_table",
     "name": "Dressing Table",
