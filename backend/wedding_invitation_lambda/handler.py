@@ -23,6 +23,15 @@ MAX_BODY_BYTES = 2048
 MAX_NAME_LENGTH = 50
 MAX_MESSAGE_LENGTH = 400
 PUBLIC_WISH_LIMIT = 4
+PHOTO_MAX_BYTES = 10 * 1024 * 1024
+PHOTO_UPLOAD_RATE_LIMIT_MAX = 10
+PHOTO_UPLOAD_RATE_LIMIT_WINDOW_SECONDS = 600
+PHOTO_ALLOWED_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+PHOTO_BUCKET = os.environ.get("PHOTO_BUCKET", "")
 with open(os.path.join(os.path.dirname(__file__), "gifts.json"), encoding="utf-8") as gifts_file:
     GIFT_CATALOG = json.load(gifts_file)
 
@@ -364,10 +373,120 @@ def unreserve_gift(event):
     print(f"Gift reservation cancelled: {gift_id}")
     return response(200, {"message": "Reservation cancelled successfully."})
 
+
+def apply_photo_upload_rate_limit(client_ip):
+    """Limit presigned upload authorizations without storing photo metadata."""
+    now = int(time.time())
+    window_start = (now // PHOTO_UPLOAD_RATE_LIMIT_WINDOW_SECONDS) * PHOTO_UPLOAD_RATE_LIMIT_WINDOW_SECONDS
+    window_end = window_start + PHOTO_UPLOAD_RATE_LIMIT_WINDOW_SECONDS
+    digest = hmac.new(RATE_LIMIT_SALT, client_ip.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    try:
+        table.update_item(
+            Key={
+                "pk": f"PHOTO_RATE#{digest}",
+                "sk": f"WINDOW#{window_start}",
+            },
+            UpdateExpression="SET expires_at = if_not_exists(expires_at, :expires) ADD request_count :one",
+            ConditionExpression="attribute_not_exists(request_count) OR request_count < :limit",
+            ExpressionAttributeValues={
+                ":expires": window_end + 3600,
+                ":one": 1,
+                ":limit": PHOTO_UPLOAD_RATE_LIMIT_MAX,
+            },
+        )
+        return True
+    except ClientError as error:
+        code = error.response.get("Error", {}).get("Code", "")
+        if code == "ConditionalCheckFailedException":
+            return False
+        raise
+
+
+def create_photo_upload(event):
+    headers = {key.lower(): value for key, value in (event.get("headers") or {}).items()}
+    if not headers.get("content-type", "").lower().startswith("application/json"):
+        return response(415, {"error": "Content-Type must be application/json."})
+    if not PHOTO_BUCKET:
+        print("Photo uploads are not configured: PHOTO_BUCKET is missing.")
+        return response(503, {"error": "Photo uploads are temporarily unavailable."})
+
+    body = event.get("body") or ""
+    try:
+        raw = base64.b64decode(body, validate=True) if event.get("isBase64Encoded") else body.encode("utf-8")
+        if len(raw) > 1024:
+            return response(413, {"error": "The request is too large."})
+        payload = json.loads(raw.decode("utf-8"))
+    except (ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError):
+        return response(400, {"error": "Invalid upload request."})
+
+    if not isinstance(payload, dict) or set(payload) - {"contentType", "website"}:
+        return response(400, {"error": "Invalid upload request."})
+
+    # A hidden form field catches unsophisticated automated submissions.
+    if clean_text(payload.get("website", "")):
+        return response(202, {"message": "Upload request accepted."})
+
+    content_type = payload.get("contentType")
+    if content_type not in PHOTO_ALLOWED_TYPES:
+        return response(400, {"error": "Only JPEG, PNG and WebP photos are supported."})
+
+    cutoff = os.environ.get("PHOTO_UPLOAD_CUTOFF_UTC", "").strip()
+    if cutoff:
+        try:
+            cutoff_at = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) >= cutoff_at:
+                return response(403, {"error": "The guest photo upload period has ended."})
+        except ValueError:
+            print("PHOTO_UPLOAD_CUTOFF_UTC is not a valid ISO-8601 timestamp.")
+            return response(503, {"error": "Photo uploads are temporarily unavailable."})
+
+    client_ip = request_ip(event)
+    if not client_ip:
+        return response(400, {"error": "The request could not be verified."})
+
+    try:
+        if not apply_photo_upload_rate_limit(client_ip):
+            return response(
+                429,
+                {"error": "You've requested too many photo uploads. Please wait a few minutes and try again."},
+                {"retry-after": str(PHOTO_UPLOAD_RATE_LIMIT_WINDOW_SECONDS)},
+            )
+
+        extension = PHOTO_ALLOWED_TYPES[content_type]
+        object_key = f"uploads/{uuid.uuid4().hex}.{extension}"
+        s3 = boto3.client("s3")
+        upload = s3.generate_presigned_post(
+            Bucket=PHOTO_BUCKET,
+            Key=object_key,
+            Fields={"Content-Type": content_type},
+            Conditions=[
+                {"Content-Type": content_type},
+                ["content-length-range", 1, PHOTO_MAX_BYTES],
+            ],
+            ExpiresIn=300,
+        )
+    except ClientError:
+        print("Could not create a presigned photo upload.")
+        return response(503, {"error": "We couldn't prepare this upload. Please try again."})
+
+    return response(200, {
+        "uploadUrl": upload["url"],
+        "fields": upload["fields"],
+        "expiresIn": 300,
+        "maxBytes": PHOTO_MAX_BYTES,
+    })
+
+
 def lambda_handler(event, context):
     path = event.get("rawPath", "")
     method = (event.get("requestContext", {}).get("http", {}).get("method") or "").upper()
     print("Received request:", path, method)
+
+    if path == "/api/photos/upload":
+        if method == "POST":
+            return create_photo_upload(event)
+        return response(405, {"error": "Method not allowed."}, {"allow": "POST"})
 
     if path == "/api/wishes":
         if method == "GET":
