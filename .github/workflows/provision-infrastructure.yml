@@ -7,10 +7,7 @@ on:
         description: "Globally unique name for the wedding website S3 bucket"
         required: true
         type: string
-      photo_upload_cutoff_utc:
-        description: "Optional UTC cutoff, e.g. 2027-03-01T00:00:00Z; leave blank to keep uploads open"
-        required: false
-        type: string
+
 
 permissions:
   contents: read
@@ -31,7 +28,6 @@ jobs:
       TF_STATE_BUCKET: deployment-tf-state-bucket
       TF_VAR_bucket_name: ${{ inputs.bucket_name }}
       TF_VAR_aws_region: ap-south-1
-      TF_VAR_photo_upload_cutoff_utc: ${{ inputs.photo_upload_cutoff_utc }}
       TF_IN_AUTOMATION: true
 
     steps:
