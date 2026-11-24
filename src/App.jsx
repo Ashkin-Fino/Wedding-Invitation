@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Gift, Heart, ImagePlus, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Gift, Heart, ImagePlus, LoaderCircle, MapPin, Menu, Music2, Pause, Send, Sparkles, Volume2, VolumeX, X } from "lucide-react";
 import { WEDDING, IMAGES, MUSIC_URL } from "./config";
 
 async function sha256Hex(value) {
@@ -153,6 +153,7 @@ function Wishes() {
 function PhotoUpload() {
   const [files,setFiles]=useState([]);
   const [uploading,setUploading]=useState(false);
+  const [uploadProgress,setUploadProgress]=useState("");
   const [successMessage,setSuccessMessage]=useState("");
   const [errorMessage,setErrorMessage]=useState("");
   const [honeypot,setHoneypot]=useState("");
@@ -213,6 +214,7 @@ function PhotoUpload() {
     let uploaded=0;
     try{
       for(const file of files){
+        setUploadProgress(`Uploading photo ${uploaded+1} of ${files.length}...`);
         const authorization=await requestUpload(file);
         const form=new FormData();
         Object.entries(authorization.fields).forEach(([key,value])=>form.append(key,value));
@@ -228,6 +230,7 @@ function PhotoUpload() {
       setErrorMessage(uploaded>0?`${uploaded} photo(s) uploaded. ${error.message||"The remaining uploads failed."}`:error.message||"We couldn't upload your photos. Please try again.");
     }finally{
       setUploading(false);
+      setUploadProgress("");
     }
   };
 
@@ -237,7 +240,8 @@ function PhotoUpload() {
     <label className="file-picker"><input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={uploading} onChange={chooseFiles}/><ImagePlus size={16}/> Choose photos</label>
     <div className="honeypot" aria-hidden="true"><label>Leave this field empty<input type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={event=>setHoneypot(event.target.value)}/></label></div>
     {files.length>0&&<div className="selected-files">{files.map((file,index)=><span key={file.name+index}><Check size={13}/>{file.name} · {(file.size/1024/1024).toFixed(1)} MB</span>)}</div>}
-    <button className="button primary upload-submit" type="button" disabled={!files.length||uploading} onClick={uploadPhotos}>{uploading?"Uploading photos...":`Upload ${files.length||""} photo(s)`} <ArrowUpRight size={15}/></button>
+    <button className="button primary upload-submit" type="button" disabled={!files.length||uploading} onClick={uploadPhotos}>{uploading?<><LoaderCircle className="upload-spinner" size={16} aria-hidden="true"/><span>{uploadProgress||"Uploading photos..."}</span></>:<>Upload {files.length||""} photo(s) <ArrowUpRight size={15}/></>}</button>
+    {uploading&&<span className="upload-progress" role="status" aria-live="polite">{uploadProgress} Please keep this page open.</span>}
     {successMessage&&<span className="success" role="status"><Check size={14}/>{successMessage}</span>}
     {errorMessage&&<span className="wish-error" role="alert">{errorMessage}</span>}
     <small>Photo uploads are planned to be open from <strong>8 February 2027, 9:00 AM IST</strong> until <strong>28 February 2027, 10:00 PM IST</strong>. JPEG, PNG or WebP · Maximum 10 MB per photo · Up to 10 photos per batch. Photos are stored privately and are not displayed on this website.</small>
