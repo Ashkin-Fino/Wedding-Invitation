@@ -61,3 +61,14 @@ Replace the value with the CloudFront domain from the Terraform output. Vite wil
 The existing **Provision AWS infrastructure** GitHub Actions workflow also updates the existing CloudFront distribution and creates the wishes resources. When running it again, enter the exact existing website bucket name (the value of the repository variable `AWS_S3_BUCKET`) so Terraform continues managing the same site bucket. The GitHub OIDC role must be allowed to manage the new DynamoDB table, Lambda function and Function URL, Lambda execution role/policy, CloudWatch log group, and CloudFront OAC/origin request policy in addition to its existing website permissions.
 
 The Function URL is not intended to be called directly. Do not change its authentication type to `NONE`, and do not add a public Lambda invoke permission. The API is same-origin, so no browser CORS allowlist is needed.
+
+
+### Private guest photo uploads
+
+Guest photos are uploaded directly from the browser to a dedicated private S3 bucket. The existing Lambda only creates short-lived presigned S3 POST authorizations; photo bytes never pass through Lambda. The upload API is `POST /api/photos/upload`. There is no public photo listing, download endpoint, gallery, or photo metadata record in DynamoDB.
+
+The photo bucket is separate from the website bucket, is encrypted with S3-managed encryption, blocks all public access, and is not connected to a public CloudFront origin. Website deployments therefore cannot delete guest uploads. After uploads, access the files in the AWS S3 Console using the `guest_photo_bucket_name` Terraform output.
+
+The browser accepts JPEG, PNG and WebP files up to 10 MiB each, with up to 10 files selected per batch. The Lambda enforces content type and a 10 MiB object-size range in the signed POST policy. Each authorization expires after five minutes. A separate hashed-IP rate-limit counter in the existing wishes table allows at most 10 upload authorizations per IP in each 10-minute window; these short-lived counters are anti-abuse state only, not photo records or metadata. The counter expires automatically.
+
+To configure an automatic upload closing time, set Terraform variable `photo_upload_cutoff_utc` to an RFC3339 UTC timestamp (for example `2027-03-01T00:00:00Z`) when running the Provision workflow. Leave it empty to keep uploads enabled until you choose to disable them. No S3 lifecycle deletion is configured; uploaded photos remain until you manually delete them.
