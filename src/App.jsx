@@ -151,14 +151,85 @@ function Wishes() {
   </div></div>;
 }
 function PhotoUpload() {
-  const [files,setFiles]=useState([]); const [sent,setSent]=useState(false);
-  return <div className="upload-card"><div className="upload-icon"><ImagePlus size={27}/></div><span className="eyebrow">THE DAY THROUGH YOUR EYES</span>
-    <h3>Help us keep every memory</h3><p>Captured a candid smile, a dance-floor moment or a little behind-the-scenes magic? We'd love to see it.</p>
-    <label className="file-picker"><input type="file" accept="image/*" multiple onChange={e=>{setFiles(Array.from(e.target.files||[]).filter(f=>f.type.startsWith("image/")).slice(0,10));setSent(false);}}/><ImagePlus size={16}/> Choose photos</label>
-    {files.length>0&&<div className="selected-files">{files.map((f,i)=><span key={f.name+i}><Check size={13}/>{f.name}</span>)}</div>}
-    <button className="button primary upload-submit" disabled={!files.length} onClick={()=>setSent(true)}>Preview upload <ArrowUpRight size={15}/></button>
-    {sent&&<span className="success"><Check size={14}/> {files.length} photo(s) selected. Online upload comes in a later milestone.</span>}
-    <small>Photo sharing will open after the wedding. Uploads will be stored privately once connected.</small>
+  const [files,setFiles]=useState([]);
+  const [uploading,setUploading]=useState(false);
+  const [successMessage,setSuccessMessage]=useState("");
+  const [errorMessage,setErrorMessage]=useState("");
+  const [honeypot,setHoneypot]=useState("");
+  const MAX_FILE_BYTES=10*1024*1024;
+  const MAX_FILES=10;
+  const ALLOWED_TYPES=["image/jpeg","image/png","image/webp"];
+
+  const chooseFiles=event=>{
+    const selected=Array.from(event.target.files||[]);
+    const valid=[];
+    const problems=[];
+    if(selected.length>MAX_FILES) problems.push(`Please choose no more than ${MAX_FILES} photos at a time.`);
+    for(const file of selected.slice(0,MAX_FILES)){
+      if(!ALLOWED_TYPES.includes(file.type)){
+        problems.push(`${file.name}: use JPEG, PNG or WebP.`);
+      }else if(file.size===0||file.size>MAX_FILE_BYTES){
+        problems.push(`${file.name}: each photo must be 10 MB or smaller.`);
+      }else{
+        valid.push(file);
+      }
+    }
+    setFiles(valid);
+    setSuccessMessage("");
+    setErrorMessage(problems.join(" "));
+    event.target.value="";
+  };
+
+  const requestUpload=async file=>{
+    const body=JSON.stringify({contentType:file.type,website:honeypot});
+    const payloadHash=await sha256Hex(body);
+    const response=await fetch("/api/photos/upload",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-amz-content-sha256":payloadHash},
+      body
+    });
+    const data=await response.json().catch(()=>({}));
+    if(response.status===202) throw new Error("The upload request could not be verified. Please refresh and try again.");
+    if(!response.ok) throw new Error(data.error||"We couldn't prepare the photo upload.");
+    return data;
+  };
+
+  const uploadPhotos=async()=>{
+    if(uploading||!files.length) return;
+    setUploading(true);
+    setSuccessMessage("");
+    setErrorMessage("");
+    let uploaded=0;
+    try{
+      for(const file of files){
+        const authorization=await requestUpload(file);
+        const form=new FormData();
+        Object.entries(authorization.fields).forEach(([key,value])=>form.append(key,value));
+        form.append("file",file);
+        const result=await fetch(authorization.uploadUrl,{method:"POST",body:form});
+        if(!result.ok) throw new Error(`S3 rejected ${file.name}. Please try again.`);
+        uploaded+=1;
+      }
+      setSuccessMessage(`${uploaded} photo(s) uploaded successfully. Thank you for sharing these memories!`);
+      setFiles([]);
+      setHoneypot("");
+    }catch(error){
+      setErrorMessage(uploaded>0?`${uploaded} photo(s) uploaded. ${error.message||"The remaining uploads failed."}`:error.message||"We couldn't upload your photos. Please try again.");
+    }finally{
+      setUploading(false);
+    }
+  };
+
+  return <div className="upload-card">
+    <div className="upload-icon"><ImagePlus size={27}/></div><span className="eyebrow">THE DAY THROUGH YOUR EYES</span>
+    <h3>Help us keep every memory</h3><p>Captured a candid smile, a dance-floor moment or a little behind-the-scenes magic? We'd love to keep a copy.</p>
+    <label className="file-picker"><input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={uploading} onChange={chooseFiles}/><ImagePlus size={16}/> Choose photos</label>
+    <div className="honeypot" aria-hidden="true"><label>Leave this field empty<input type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={event=>setHoneypot(event.target.value)}/></label></div>
+    {files.length>0&&<div className="selected-files">{files.map((file,index)=><span key={file.name+index}><Check size={13}/>{file.name} · {(file.size/1024/1024).toFixed(1)} MB</span>)}</div>}
+    <button className="button primary upload-submit" type="button" disabled={!files.length||uploading} onClick={uploadPhotos}>{uploading?"Uploading photos...":`Upload ${files.length||""} photo(s)`} <ArrowUpRight size={15}/></button>
+    {successMessage&&<span className="success" role="status"><Check size={14}/>{successMessage}</span>}
+    {errorMessage&&<span className="wish-error" role="alert">{errorMessage}</span>}
+    <small>JPEG, PNG or WebP · Maximum 10 MB per photo · Up to 10 photos per batch. Photos are stored privately and are not displayed on this website.</small>
   </div>;
 }
 const GIFT_TOKEN_STORAGE_KEY = "wedding-gift-reservation-tokens-v1";
