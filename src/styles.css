@@ -56,3 +56,10 @@
   .gift-modal-actions{display:grid;grid-template-columns:1fr 1.4fr}
   .gift-modal-actions .button{padding:12px 10px;font-size:9px}
 }
+
+
+/* Private guest photo upload feedback */
+.upload-card .success,.upload-card .wish-error{display:flex;justify-content:center;align-items:flex-start;gap:7px;line-height:1.6;text-align:left}
+.upload-card .success svg{flex:0 0 auto;margin-top:2px}
+.upload-card .file-picker:has(input:disabled){opacity:.5;cursor:not-allowed}
+.upload-card .selected-files span{overflow-wrap:anywhere}
