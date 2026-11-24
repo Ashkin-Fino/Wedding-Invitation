@@ -33,6 +33,7 @@ locals {
   site_bucket_arn = "arn:aws:s3:::${var.bucket_name}"
   lambda_origin_id = "lambda-wishes"
   s3_origin_id     = "private-s3-${aws_s3_bucket.site.id}"
+  photo_bucket_name = "${var.bucket_name}-guest-photos"
 }
 
 # Website bucket and CloudFront OAC
@@ -82,6 +83,59 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
+
+# Private guest photo uploads. This bucket is separate from the website bucket
+# so frontend deployments using "aws s3 sync --delete" cannot remove guest photos.
+resource "aws_s3_bucket" "guest_photos" {
+  bucket        = local.photo_bucket_name
+  force_destroy = false
+
+  tags = {
+    Project     = "AshkinYesodhaaWedding"
+    Environment = "production"
+    ManagedBy   = "Terraform"
+    Purpose     = "PrivateGuestPhotoUploads"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "guest_photos" {
+  bucket                  = aws_s3_bucket.guest_photos.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "guest_photos" {
+  bucket = aws_s3_bucket.guest_photos.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "guest_photos" {
+  bucket = aws_s3_bucket.guest_photos.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_cors_configuration" "guest_photos" {
+  bucket = aws_s3_bucket.guest_photos.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["POST"]
+    allowed_origins = ["https://${aws_cloudfront_distribution.site.domain_name}"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
 # Wishes API resources
 
 data "aws_iam_policy_document" "wedding_invitation_lambda_assume_role" {
@@ -110,6 +164,13 @@ data "aws_iam_policy_document" "wedding_invitation_lambda_permissions" {
       aws_dynamodb_table.wedding_invitation_wishes.arn,
       "${aws_dynamodb_table.wedding_invitation_wishes.arn}/index/status-created_at-index",
     ]
+  }
+
+  statement {
+    sid       = "UploadGuestPhotos"
+    effect    = "Allow"
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.guest_photos.arn}/uploads/*"]
   }
 
   statement {
@@ -227,6 +288,8 @@ resource "aws_lambda_function" "wedding_invitation_lambda" {
     variables = {
       TABLE_NAME      = aws_dynamodb_table.wedding_invitation_wishes.name
       RATE_LIMIT_SALT = random_password.wedding_invitation_rate_limit_salt.result
+      PHOTO_BUCKET            = aws_s3_bucket.guest_photos.id
+      PHOTO_UPLOAD_CUTOFF_UTC = var.photo_upload_cutoff_utc
     }
   }
 
@@ -434,6 +497,11 @@ output "cloudfront_distribution_id" {
 output "cloudfront_domain_name" {
   description = "Public HTTPS URL for the invitation site."
   value       = "https://${aws_cloudfront_distribution.site.domain_name}"
+}
+
+output "guest_photo_bucket_name" {
+  description = "Private S3 bucket containing guest-uploaded photos."
+  value       = aws_s3_bucket.guest_photos.bucket
 }
 
 output "wishes_table_name" {
