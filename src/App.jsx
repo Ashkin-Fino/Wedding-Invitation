@@ -229,7 +229,7 @@ function PhotoUpload() {
     <button className="button primary upload-submit" type="button" disabled={!files.length||uploading} onClick={uploadPhotos}>{uploading?"Uploading photos...":`Upload ${files.length||""} photo(s)`} <ArrowUpRight size={15}/></button>
     {successMessage&&<span className="success" role="status"><Check size={14}/>{successMessage}</span>}
     {errorMessage&&<span className="wish-error" role="alert">{errorMessage}</span>}
-    <small>JPEG, PNG or WebP · Maximum 10 MB per photo · Up to 10 photos per batch. Photos are stored privately and are not displayed on this website.</small>
+    <small>Photo uploads are planned to be open from <strong>8 February 2027, 9:00 AM IST</strong> until <strong>28 February 2027, 10:00 PM IST</strong>. JPEG, PNG or WebP · Maximum 10 MB per photo · Up to 10 photos per batch. Photos are stored privately and are not displayed on this website.</small>
   </div>;
 }
 const GIFT_TOKEN_STORAGE_KEY = "wedding-gift-reservation-tokens-v1";
