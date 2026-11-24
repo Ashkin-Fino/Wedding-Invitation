@@ -71,4 +71,23 @@ The photo bucket is separate from the website bucket, is encrypted with S3-manag
 
 The browser accepts JPEG, PNG and WebP files up to 10 MiB each, with up to 10 files selected per batch. The Lambda enforces content type and a 10 MiB object-size range in the signed POST policy. Each authorization expires after five minutes. A separate hashed-IP rate-limit counter in the existing wishes table allows at most 10 upload authorizations per IP in each 10-minute window; these short-lived counters are anti-abuse state only, not photo records or metadata. The counter expires automatically.
 
-Upload availability is controlled manually using the Lambda environment variable `PHOTO_UPLOAD_ENABLED`. Terraform provisions it as `false` by default. In the AWS Lambda Console, open the existing wishes function, choose Configuration → Environment variables → Edit, and set `PHOTO_UPLOAD_ENABLED` to `true` to open uploads or `false` to close them. Save the change; Lambda applies the new configuration after the update completes. A future run of the Provision workflow will restore the Terraform-managed default (`false`), so set it to `true` again if uploads should remain open after reprovisioning. The website displays the planned window (8 February 2027, 9:00 AM IST through 28 February 2027, 10:00 PM IST), but the backend intentionally enforces only the Boolean flag, not these dates. No S3 lifecycle deletion is configured; uploaded photos remain until you manually delete them.
+Upload availability is controlled by the Lambda environment variable `PHOTO_UPLOAD_ENABLED`. Terraform provisions it as `false` by default. The **Deploy wedding invitation to AWS** GitHub Actions workflow now asks for a `photo_upload_enabled` choice on every manual run:
+- Choose `false` to keep guest uploads closed (the safe default).
+- Choose `true` to open guest uploads.
+
+The workflow updates this one Lambda environment variable and preserves all other existing Lambda environment variables. It waits for the Lambda configuration update to finish before continuing with the website deployment. A future Provision workflow run restores the Terraform-managed default (`false`); choose `true` on the next Deploy run if uploads should be open again.
+
+**One-time IAM permission:** the GitHub OIDC deployment role (`Github-Deployment-Role`) must be allowed to read and update the environment configuration of this Lambda. Add this statement to a policy attached to that role (replace nothing; the account, region and function name below are for this project):
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "lambda:GetFunctionConfiguration",
+    "lambda:UpdateFunctionConfiguration"
+  ],
+  "Resource": "arn:aws:lambda:ap-south-1:669930664580:function:ashkin-yesodhaa-wedding-lambda"
+}
+```
+
+The website displays the planned window (8 February 2027, 9:00 AM IST through 28 February 2027, 10:00 PM IST), but the backend intentionally enforces only the Boolean flag, not these dates. No S3 lifecycle deletion is configured; uploaded photos remain until you manually delete them.
