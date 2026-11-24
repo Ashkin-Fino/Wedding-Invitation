@@ -289,7 +289,7 @@ resource "aws_lambda_function" "wedding_invitation_lambda" {
       TABLE_NAME      = aws_dynamodb_table.wedding_invitation_wishes.name
       RATE_LIMIT_SALT = random_password.wedding_invitation_rate_limit_salt.result
       PHOTO_BUCKET            = aws_s3_bucket.guest_photos.id
-      PHOTO_UPLOAD_CUTOFF_UTC = var.photo_upload_cutoff_utc
+      PHOTO_UPLOAD_ENABLED = "false"
     }
   }
 
