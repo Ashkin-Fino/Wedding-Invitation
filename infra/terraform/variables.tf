@@ -23,3 +23,15 @@ variable "bucket_name" {
     error_message = "bucket_name must be a valid, globally unique lowercase S3 bucket name."
   }
 }
+
+
+variable "photo_upload_cutoff_utc" {
+  description = "Optional ISO-8601 UTC cutoff for guest photo upload authorization, for example 2027-03-01T00:00:00Z. Leave empty to keep uploads enabled until manually disabled."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.photo_upload_cutoff_utc == "" || can(timeadd(var.photo_upload_cutoff_utc, "0s"))
+    error_message = "photo_upload_cutoff_utc must be empty or a valid RFC3339 UTC timestamp."
+  }
+}
