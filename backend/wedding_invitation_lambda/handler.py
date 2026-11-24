@@ -431,15 +431,9 @@ def create_photo_upload(event):
     if content_type not in PHOTO_ALLOWED_TYPES:
         return response(400, {"error": "Only JPEG, PNG and WebP photos are supported."})
 
-    cutoff = os.environ.get("PHOTO_UPLOAD_CUTOFF_UTC", "").strip()
-    if cutoff:
-        try:
-            cutoff_at = datetime.fromisoformat(cutoff.replace("Z", "+00:00"))
-            if datetime.now(timezone.utc) >= cutoff_at:
-                return response(403, {"error": "The guest photo upload period has ended."})
-        except ValueError:
-            print("PHOTO_UPLOAD_CUTOFF_UTC is not a valid ISO-8601 timestamp.")
-            return response(503, {"error": "Photo uploads are temporarily unavailable."})
+    # Upload availability is controlled manually through the Lambda environment.
+    if os.environ.get("PHOTO_UPLOAD_ENABLED", "false").strip().lower() != "true":
+        return response(403, {"error": "Photo uploads are currently closed."})
 
     client_ip = request_ip(event)
     if not client_ip:
