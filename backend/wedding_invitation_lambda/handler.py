@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 
 import boto3
 from boto3.dynamodb.conditions import Key
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 TABLE_NAME = os.environ["TABLE_NAME"]
@@ -449,7 +450,16 @@ def create_photo_upload(event):
 
         extension = PHOTO_ALLOWED_TYPES[content_type]
         object_key = f"uploads/{uuid.uuid4().hex}.{extension}"
-        s3 = boto3.client("s3")
+        region = os.environ.get("AWS_REGION", "ap-south-1")
+        s3 = boto3.client(
+            "s3",
+            region_name=region,
+            endpoint_url=f"https://s3.{region}.amazonaws.com",
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "virtual"},
+            ),
+        )
         upload = s3.generate_presigned_post(
             Bucket=PHOTO_BUCKET,
             Key=object_key,
