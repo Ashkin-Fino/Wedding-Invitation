@@ -190,6 +190,17 @@ function PhotoUpload() {
     });
     const data=await response.json().catch(()=>({}));
     if(response.status===202) throw new Error("The upload request could not be verified. Please refresh and try again.");
+
+    // CloudFront may map an origin 403 to the website's index.html (HTTP 200).
+    // Treat a missing presigned-POST payload as the upload window being closed.
+    const uploadIsClosed = response.status === 403 ||
+      data.error === "Photo uploads are currently closed." ||
+      !data.uploadUrl ||
+      !data.fields ||
+      typeof data.fields !== "object";
+    if(uploadIsClosed) {
+      throw new Error("Photo upload feature is not yet live. It will open on 8 February at 9:00 AM IST.");
+    }
     if(!response.ok) throw new Error(data.error||"We couldn't prepare the photo upload.");
     return data;
   };
