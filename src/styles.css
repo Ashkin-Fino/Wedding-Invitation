@@ -63,3 +63,10 @@
 .upload-card .success svg{flex:0 0 auto;margin-top:2px}
 .upload-card .file-picker:has(input:disabled){opacity:.5;cursor:not-allowed}
 .upload-card .selected-files span{overflow-wrap:anywhere}
+
+
+/* Guest photo upload progress */
+.upload-spinner{flex:0 0 auto;animation:wedding-upload-spin .8s linear infinite}
+.upload-progress{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--muted);font-size:10px;line-height:1.5;margin-top:10px;text-align:center}
+@keyframes wedding-upload-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.upload-spinner{animation-duration:2s}}

@@ -8,6 +8,14 @@ on:
         required: true
         type: boolean
         default: true
+      photo_upload_enabled:
+        description: "Set guest photo uploads to this state (true opens uploads; false closes them)"
+        required: true
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
 
 permissions:
   contents: read
@@ -28,6 +36,7 @@ jobs:
       AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
       S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}
+      PHOTO_UPLOAD_ENABLED: ${{ inputs.photo_upload_enabled }}
 
     steps:
       - name: Check out source
@@ -37,7 +46,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-    
+
       - name: Install dependencies
         run: npm install
 
@@ -51,12 +60,41 @@ jobs:
           test -n "$AWS_ROLE_ARN" || (echo "Missing repository variable AWS_ROLE_ARN" && exit 1)
           test -n "$S3_BUCKET" || (echo "Missing repository variable AWS_S3_BUCKET" && exit 1)
           test -n "$CLOUDFRONT_DISTRIBUTION_ID" || (echo "Missing repository variable AWS_CLOUDFRONT_DISTRIBUTION_ID" && exit 1)
+          case "$PHOTO_UPLOAD_ENABLED" in
+            true|false) ;;
+            *) echo "PHOTO_UPLOAD_ENABLED must be true or false"; exit 1 ;;
+          esac
 
       - name: Configure AWS credentials with GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update guest photo upload availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          FUNCTION_NAME="ashkin-yesodhaa-wedding-lambda"
+          echo "Setting PHOTO_UPLOAD_ENABLED=$PHOTO_UPLOAD_ENABLED on $FUNCTION_NAME"
+
+          CURRENT_ENV="$(aws lambda get-function-configuration \
+            --function-name "$FUNCTION_NAME" \
+            --query 'Environment.Variables' \
+            --output json)"
+
+          UPDATED_ENV="$(jq -n \
+            --argjson current "$CURRENT_ENV" \
+            --arg enabled "$PHOTO_UPLOAD_ENABLED" \
+            '{Variables: (($current // {}) + {PHOTO_UPLOAD_ENABLED: $enabled})}')"
+
+          printf '%s\n' "$UPDATED_ENV" > /tmp/lambda-environment.json
+          aws lambda update-function-configuration \
+            --function-name "$FUNCTION_NAME" \
+            --environment file:///tmp/lambda-environment.json
+
+          aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+          echo "Photo upload availability is now $PHOTO_UPLOAD_ENABLED."
 
       - name: Upload site to S3
         run: aws s3 sync dist/ "s3://$S3_BUCKET/" --delete
