@@ -18,6 +18,12 @@
     "image": "/images/gifts/fruit-juicer.jpeg"
   },
   {
+    "id": "speaker",
+    "name": "Speaker",
+    "detail": "Help us enjoy music and entertainment together in our new home.",
+    "image": "/images/gifts/speaker.jpeg"
+  },
+  {
     "id": "mixie",
     "name": "Mixie",
     "detail": "Help us blend favorite flavors into joyful mornings and festive married-life celebrations.",
